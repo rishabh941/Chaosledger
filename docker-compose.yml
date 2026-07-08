@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  # ── PostgreSQL Instances ──
+  postgres-1:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: chaosledger
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      TZ: UTC
+    volumes:
+      - pgdata1:/var/lib/postgresql/data
+    networks: [ledger-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-2:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: chaosledger
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      TZ: UTC
+    volumes:
+      - pgdata2:/var/lib/postgresql/data
+    networks: [ledger-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-3:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: chaosledger
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      TZ: UTC
+    volumes:
+      - pgdata3:/var/lib/postgresql/data
+    networks: [ledger-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── ChaosLedger Nodes ──
+  ledger-1:
+    build: .
+    environment:
+      SPRING_PROFILES_ACTIVE: node1
+      JAVA_OPTS: "-Duser.timezone=UTC -Xmx384m -Xms256m"
+    ports:
+      - "8080:8080"
+      - "9864:9864"
+    volumes:
+      - raftdata1:/data/raft
+    depends_on:
+      postgres-1:
+        condition: service_healthy
+    networks: [ledger-net]
+
+  ledger-2:
+    build: .
+    environment:
+      SPRING_PROFILES_ACTIVE: node2
+      JAVA_OPTS: "-Duser.timezone=UTC -Xmx384m -Xms256m"
+    ports:
+      - "8081:8081"
+      - "9865:9865"
+    volumes:
+      - raftdata2:/data/raft
+    depends_on:
+      postgres-2:
+        condition: service_healthy
+    networks: [ledger-net]
+
+  ledger-3:
+    build: .
+    environment:
+      SPRING_PROFILES_ACTIVE: node3
+      JAVA_OPTS: "-Duser.timezone=UTC -Xmx384m -Xms256m"
+    ports:
+      - "8082:8082"
+      - "9866:9866"
+    volumes:
+      - raftdata3:/data/raft
+    depends_on:
+      postgres-3:
+        condition: service_healthy
+    networks: [ledger-net]
+
+volumes:
+  pgdata1:
+  pgdata2:
+  pgdata3:
+  raftdata1:
+  raftdata2:
+  raftdata3:
+
+networks:
+  ledger-net:
+    driver: bridge
