@@ -2,6 +2,8 @@ package com.chaosledger.ledger.infrastructure.raft;
 
 import com.chaosledger.ledger.domain.events.Event;
 import com.chaosledger.ledger.domain.events.EventStore;
+import com.chaosledger.ledger.domain.hlc.HlcTimestamp;
+import com.chaosledger.ledger.domain.hlc.HybridLogicalClock;
 import com.chaosledger.ledger.infrastructure.eventstore.PostgresEventStore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +39,14 @@ import java.util.UUID;
  * stores events in the database — using Class.forName() to deserialize
  * back to the concrete type. This avoids polluting the domain Event
  * interface with @JsonTypeInfo annotations.
+
+ * Week 9 change: Before submitting to Raft, the leader ticks its HLC
+ * and includes the timestamp in the RaftEventCommand. When each node's
+ * LedgerStateMachine applies the entry, it stores this HLC timestamp
+ * and updates its own clock via hlc.update(). This ensures:
+ *   - All nodes store the same HLC timestamp for the same event
+ *   - Causal ordering is preserved across leader elections
+ *   - Clock drift on any node does not produce backward timestamps
  */
 @Service
 @Primary
@@ -47,14 +57,17 @@ public class RaftEventStore implements EventStore {
     private final RaftClient raftClient;
     private final PostgresEventStore postgresEventStore;
     private final ObjectMapper objectMapper;
+    private final HybridLogicalClock hlc;
 
     public RaftEventStore(RaftClient raftClient,
                           PostgresEventStore postgresEventStore,
-                          ObjectMapper objectMapper) {
+                          ObjectMapper objectMapper,
+                          HybridLogicalClock hlc) {
         this.raftClient = raftClient;
         this.postgresEventStore = postgresEventStore;
         this.objectMapper = objectMapper;
-        log.info("RaftEventStore initialized — writes will go through Raft consensus");
+        this.hlc = hlc;
+        log.info("RaftEventStore initialized — writes will go through Raft consensus with HLC timestamps");
     }
 
     /**
@@ -84,7 +97,14 @@ public class RaftEventStore implements EventStore {
         }
 
         try {
+
+            // 1. Tick the HLC BEFORE submitting to Raft.
+            //    This timestamp will travel through the Raft log
+            //    and be stored on all nodes.
+            HlcTimestamp ts = hlc.tick();
+            log.debug("HLC tick for Raft submission: {}", ts);
             // 1. Wrap each event with its type name + JSON
+
             List<RaftEventCommand.RaftEventEntry> entries = newEvents.stream()
                     .map(event -> {
                         try {
@@ -101,7 +121,8 @@ public class RaftEventStore implements EventStore {
 
             // 2. Create the command envelope
             RaftEventCommand cmd = new RaftEventCommand(
-                    aggregateId, expectedVersion, entries);
+                    aggregateId, expectedVersion, entries,
+                    ts.physicalTime(), ts.logicalCounter(), ts.nodeId());
 
             // 3. Serialize the entire envelope to bytes
             byte[] bytes = objectMapper.writeValueAsBytes(cmd);

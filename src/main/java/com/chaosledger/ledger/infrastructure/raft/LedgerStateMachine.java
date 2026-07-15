@@ -2,6 +2,8 @@ package com.chaosledger.ledger.infrastructure.raft;
 
 import com.chaosledger.ledger.domain.events.ConcurrencyException;
 import com.chaosledger.ledger.domain.events.Event;
+import com.chaosledger.ledger.domain.hlc.HlcTimestamp;
+import com.chaosledger.ledger.domain.hlc.HybridLogicalClock;
 import com.chaosledger.ledger.infrastructure.eventstore.PostgresEventStore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +35,12 @@ import java.util.concurrent.CompletableFuture;
  * CRITICAL: This method runs on ALL nodes (leader + followers).
  * Each node independently applies the same entries in the same order,
  * so all PostgreSQL databases end up with identical data.
+ * Week 9 change: When applying a committed entry, the state machine now:
+ *  1. Extracts the leader's HLC timestamp from the RaftEventCommand
+ *  2. Calls hlc.update(leaderTimestamp) to advance the local clock
+ *  3. Passes the HLC timestamp to PostgresEventStore.appendWithHlc()
+ * This ensures every node's HLC stays causally consistent with the leader,
+ * even if the follower's wall clock is behind.
  */
 @Slf4j
 public class LedgerStateMachine extends BaseStateMachine {
@@ -42,11 +50,14 @@ public class LedgerStateMachine extends BaseStateMachine {
 
     private final PostgresEventStore postgresEventStore;
     private final ObjectMapper objectMapper;
+    private final HybridLogicalClock hlc;
 
     public LedgerStateMachine(PostgresEventStore postgresEventStore,
-                              ObjectMapper objectMapper) {
+                              ObjectMapper objectMapper,
+                              HybridLogicalClock hlc) {
         this.postgresEventStore = postgresEventStore;
         this.objectMapper = objectMapper;
+        this.hlc = hlc;
     }
 
     /**
@@ -72,6 +83,22 @@ public class LedgerStateMachine extends BaseStateMachine {
             RaftEventCommand cmd = objectMapper.readValue(
                     bytes, RaftEventCommand.class);
 
+            // Week 9: Extract HLC timestamp from the command
+            HlcTimestamp leaderHlc = null;
+            if (cmd.hlcPhysicalTime() != null
+                    && cmd.hlcLogicalCounter() != null
+                    && cmd.hlcNodeId() != null) {
+                leaderHlc = new HlcTimestamp(
+                        cmd.hlcPhysicalTime(),
+                        cmd.hlcLogicalCounter(),
+                        cmd.hlcNodeId());
+
+                // Update local HLC — ensures this node's clock
+                // stays >= the leader's timestamp
+                hlc.update(leaderHlc);
+                log.debug("HLC updated from leader timestamp: {}", leaderHlc);
+            }
+
             // 3. Reconstruct Event objects from type name + JSON
             //    Same pattern as PostgresEventStore.fromEntity()
             List<Event> events = cmd.entries().stream()
@@ -79,16 +106,26 @@ public class LedgerStateMachine extends BaseStateMachine {
                     .toList();
 
             log.info("Applying committed entry [term={}, index={}]: "
-                            + "aggregateId={}, expectedVersion={}, eventCount={}",
+                            + "aggregateId={}, expectedVersion={}, eventCount={}, hlc{}",
                     termIndex.getTerm(), termIndex.getIndex(),
                     cmd.aggregateId(), cmd.expectedVersion(),
-                    events.size());
+                    events.size(), leaderHlc);
 
-            // 4. Write to PostgreSQL via the existing store
-            postgresEventStore.append(
-                    cmd.aggregateId(),
-                    cmd.expectedVersion(),
-                    events);
+            // Week 9: Use appendWithHlc if HLC timestamp is present
+            if (leaderHlc != null) {
+                postgresEventStore.appendWithHlc(
+                        cmd.aggregateId(),
+                        cmd.expectedVersion(),
+                        events,
+                        leaderHlc);
+            } else {
+                // Backward compatibility for entries committed
+                // before Week 9 (no HLC in the log)
+                postgresEventStore.append(
+                        cmd.aggregateId(),
+                        cmd.expectedVersion(),
+                        events);
+            }
 
             log.debug("Successfully applied entry [index={}] to Postgres",
                     termIndex.getIndex());

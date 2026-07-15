@@ -1,5 +1,6 @@
 package com.chaosledger.ledger.infrastructure.raft;
 
+import com.chaosledger.ledger.domain.hlc.HybridLogicalClock;
 import com.chaosledger.ledger.infrastructure.eventstore.PostgresEventStore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -55,9 +56,10 @@ public class RaftConfiguration {
 
     @Bean
     public LedgerStateMachine ledgerStateMachine(PostgresEventStore postgresEventStore,
-                                                 ObjectMapper objectMapper) {
+                                                 ObjectMapper objectMapper,
+                                                 HybridLogicalClock hlc) {
         log.info("Creating LedgerStateMachine");
-        return new LedgerStateMachine(postgresEventStore, objectMapper);
+        return new LedgerStateMachine(postgresEventStore, objectMapper, hlc);
     }
 
     @Bean
@@ -112,6 +114,8 @@ public class RaftConfiguration {
         File raftStorageDir = new File(storageDir, nodeId);
         RaftServerConfigKeys.setStorageDir(properties,
                 Collections.singletonList(raftStorageDir));
+
+        properties.set("raft.server.storage.startup.option", "RECOVER");
 
         log.info("Starting RaftServer: nodeId={}, address={}:{}, storage={}",
                 nodeId, nodeHost, nodePort, raftStorageDir.getAbsolutePath());
