@@ -1,0 +1,99 @@
+# docker-compose.test.yml — used by Testcontainers ComposeContainer for Week 10.
+#
+# Differences from the main docker-compose.yml at the project root:
+#   1. No explicit host port mappings. Testcontainers assigns random host ports
+#      via withExposedService(...), so parallel test runs never collide.
+#   2. Uses a pre-built image tag (chaosledger-ledger:test) instead of `build: .`
+#      so tests do not repeatedly rebuild the JAR. You build once with:
+#          mvn clean package -DskipTests
+#          docker build -t chaosledger-ledger:test .
+#   3. Raft storage is a tmpfs — every test run starts with an empty Raft log.
+#      In the main compose file this is a named volume so state survives
+#      restarts; in tests we want the opposite.
+#   4. Postgres containers share the same behaviour as production but without
+#      the healthcheck retry padding (tests fail fast on genuine misconfig).
+version: '3.8'
+
+services:
+
+  postgres-1:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: chaosledger
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      TZ: UTC
+    networks: [ledger-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  postgres-2:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: chaosledger
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      TZ: UTC
+    networks: [ledger-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  postgres-3:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: chaosledger
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      TZ: UTC
+    networks: [ledger-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  ledger-1:
+    image: chaosledger-ledger:test
+    environment:
+      SPRING_PROFILES_ACTIVE: node1
+      JAVA_OPTS: "-Duser.timezone=UTC -Xmx384m -Xms256m"
+    tmpfs:
+      - /data/raft
+    depends_on:
+      postgres-1:
+        condition: service_healthy
+    networks: [ledger-net]
+
+  ledger-2:
+    image: chaosledger-ledger:test
+    environment:
+      SPRING_PROFILES_ACTIVE: node2
+      JAVA_OPTS: "-Duser.timezone=UTC -Xmx384m -Xms256m"
+    tmpfs:
+      - /data/raft
+    depends_on:
+      postgres-2:
+        condition: service_healthy
+    networks: [ledger-net]
+
+  ledger-3:
+    image: chaosledger-ledger:test
+    environment:
+      SPRING_PROFILES_ACTIVE: node3
+      JAVA_OPTS: "-Duser.timezone=UTC -Xmx384m -Xms256m"
+    tmpfs:
+      - /data/raft
+    depends_on:
+      postgres-3:
+        condition: service_healthy
+    networks: [ledger-net]
+
+networks:
+  ledger-net:
+    driver: bridge

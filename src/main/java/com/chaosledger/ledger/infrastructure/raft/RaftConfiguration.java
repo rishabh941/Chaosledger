@@ -112,6 +112,15 @@ public class RaftConfiguration {
 
         // Storage directory for Raft WAL (write-ahead log)
         File raftStorageDir = new File(storageDir, nodeId);
+        // If Raft storage already exists from a previous run, clean it.
+        // This is safe because ChaosLedger's state lives in PostgreSQL —
+        // the Raft WAL is only used for replication, not as the source of truth.
+        // On restart, the node rejoins the cluster and catches up automatically.
+        if (raftStorageDir.exists() && raftStorageDir.isDirectory()) {
+            log.warn("Existing Raft storage found at {}. Cleaning for fresh FORMAT.",
+                    raftStorageDir.getAbsolutePath());
+            deleteRecursive(raftStorageDir);
+        }
         RaftServerConfigKeys.setStorageDir(properties,
                 Collections.singletonList(raftStorageDir));
 
@@ -131,6 +140,7 @@ public class RaftConfiguration {
         log.info("RaftServer started: {}", nodeId);
 
         return server;
+
     }
 
     @Bean(destroyMethod = "close")
@@ -144,5 +154,18 @@ public class RaftConfiguration {
 
         log.info("RaftClient created for group: {}", groupId);
         return client;
+    }
+    private void deleteRecursive(File file) {
+        if (file.isDirectory()) {
+            File[] children = file.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    deleteRecursive(child);
+                }
+            }
+        }
+        if (!file.delete()) {
+            log.warn("Failed to delete: {}", file.getAbsolutePath());
+        }
     }
 }
