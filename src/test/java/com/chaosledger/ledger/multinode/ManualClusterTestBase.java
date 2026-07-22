@@ -2,6 +2,10 @@ package com.chaosledger.ledger.multinode;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.TestMethodOrder;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+
 
 import java.time.Duration;
 import java.util.List;
@@ -20,6 +24,9 @@ import java.util.List;
  *
  * The cluster must be running on localhost ports 8080, 8081, 8082.
  */
+
+@EnabledIfEnvironmentVariable(named = "RUN_MULTINODE_TESTS", matches = "true")
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public abstract class ManualClusterTestBase {
 
     protected static ClusterClient client;

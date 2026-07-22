@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -27,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *  5. The hlc.update(leaderHlc) call in the state machine actually runs
  *     (verified via the /api/hlc/status endpoint on a follower).
  */
+@EnabledIfEnvironmentVariable(named = "RUN_MULTINODE_TESTS", matches = "true")
 class HlcCrossNodeTest extends ManualClusterTestBase {
 
     @Test

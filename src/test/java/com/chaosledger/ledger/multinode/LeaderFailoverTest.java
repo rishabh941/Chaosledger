@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -21,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   3. New writes go through the new leader without loss.
  *   4. The crashed node catches up from the Raft log when it restarts.
  */
+@EnabledIfEnvironmentVariable(named = "RUN_MULTINODE_TESTS", matches = "true")
 class LeaderFailoverTest extends ClusterTestBase {
 
     @Test

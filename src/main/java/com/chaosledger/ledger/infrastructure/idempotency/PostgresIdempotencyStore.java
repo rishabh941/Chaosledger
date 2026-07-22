@@ -27,4 +27,21 @@ public class PostgresIdempotencyStore implements IdempotencyStore {
                 .processedAt(Instant.now())
                 .build());
     }
+
+    @Override
+    public void recordIfAbsent(UUID idempotencyKey, String commandType, UUID aggregateId) {
+        if (!repository.existsById(idempotencyKey)) {
+            try {
+                repository.save(ProcessedCommandEntity.builder()
+                        .idempotencyKey(idempotencyKey)
+                        .commandType(commandType)
+                        .aggregateId(aggregateId)
+                        .processedAt(Instant.now())
+                        .build());
+            } catch (Exception e) {
+                // Unique constraint violation — another thread or a replay
+                // already recorded this key. Safe to ignore.
+            }
+        }
+    }
 }

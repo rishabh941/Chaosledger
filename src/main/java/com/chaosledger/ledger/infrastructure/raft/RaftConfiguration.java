@@ -5,6 +5,7 @@ import com.chaosledger.ledger.infrastructure.eventstore.PostgresEventStore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ratis.client.RaftClient;
+import com.chaosledger.ledger.domain.IdempotencyStore;
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.grpc.GrpcConfigKeys;
 import org.apache.ratis.protocol.*;
@@ -57,9 +58,10 @@ public class RaftConfiguration {
     @Bean
     public LedgerStateMachine ledgerStateMachine(PostgresEventStore postgresEventStore,
                                                  ObjectMapper objectMapper,
-                                                 HybridLogicalClock hlc) {
+                                                 HybridLogicalClock hlc,
+                                                 IdempotencyStore idempotencyStore) {
         log.info("Creating LedgerStateMachine");
-        return new LedgerStateMachine(postgresEventStore, objectMapper, hlc);
+        return new LedgerStateMachine(postgresEventStore, objectMapper, hlc, idempotencyStore);
     }
 
     @Bean
@@ -92,7 +94,6 @@ public class RaftConfiguration {
 
         return group;
     }
-
     @Bean(destroyMethod = "close")
     public RaftServer raftServer(RaftGroup group,
                                  LedgerStateMachine stateMachine) throws IOException {
@@ -155,6 +156,7 @@ public class RaftConfiguration {
         log.info("RaftClient created for group: {}", groupId);
         return client;
     }
+
     private void deleteRecursive(File file) {
         if (file.isDirectory()) {
             File[] children = file.listFiles();

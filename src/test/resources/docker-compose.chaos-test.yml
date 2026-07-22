@@ -1,0 +1,115 @@
+# src/test/resources/docker-compose.chaos-test.yml
+#
+# Week 11 — Testcontainers version of the chaos compose file.
+#
+# Same topology as docker-compose.chaos.yml but with:
+#   - No host port mappings (Testcontainers assigns random ports)
+#   - Pre-built image tag (chaosledger-ledger:test)
+#   - tmpfs for Raft storage (clean state per test)
+#   - Ephemeral Postgres (no named volumes)
+#
+# Proxies are created by ChaosTestBase in Java, not by an init container,
+# because Testcontainers needs the cluster healthy before tests run.
+version: '3.8'
+
+services:
+
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.9.0
+    networks: [ledger-net]
+    healthcheck:
+      test: ["CMD", "/toxiproxy-cli", "list"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  postgres-1:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: chaosledger
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      TZ: UTC
+    networks: [ledger-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  postgres-2:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: chaosledger
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      TZ: UTC
+    networks: [ledger-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  postgres-3:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: chaosledger
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      TZ: UTC
+    networks: [ledger-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  ledger-1:
+    image: chaosledger-ledger:test
+    environment:
+      SPRING_PROFILES_ACTIVE: node1
+      JAVA_OPTS: "-Duser.timezone=UTC -Xmx384m -Xms256m"
+      RAFT_PEERS: "node-1:toxiproxy:19864,node-2:toxiproxy:19865,node-3:toxiproxy:19866"
+    tmpfs:
+      - /data/raft
+    depends_on:
+      postgres-1:
+        condition: service_healthy
+      toxiproxy:
+        condition: service_healthy
+    networks: [ledger-net]
+
+  ledger-2:
+    image: chaosledger-ledger:test
+    environment:
+      SPRING_PROFILES_ACTIVE: node2
+      JAVA_OPTS: "-Duser.timezone=UTC -Xmx384m -Xms256m"
+      RAFT_PEERS: "node-1:toxiproxy:19864,node-2:toxiproxy:19865,node-3:toxiproxy:19866"
+    tmpfs:
+      - /data/raft
+    depends_on:
+      postgres-2:
+        condition: service_healthy
+      toxiproxy:
+        condition: service_healthy
+    networks: [ledger-net]
+
+  ledger-3:
+    image: chaosledger-ledger:test
+    environment:
+      SPRING_PROFILES_ACTIVE: node3
+      JAVA_OPTS: "-Duser.timezone=UTC -Xmx384m -Xms256m"
+      RAFT_PEERS: "node-1:toxiproxy:19864,node-2:toxiproxy:19865,node-3:toxiproxy:19866"
+    tmpfs:
+      - /data/raft
+    depends_on:
+      postgres-3:
+        condition: service_healthy
+      toxiproxy:
+        condition: service_healthy
+    networks: [ledger-net]
+
+networks:
+  ledger-net:
+    driver: bridge

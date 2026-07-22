@@ -1,9 +1,10 @@
 package com.chaosledger.ledger.multinode;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import org.junit.jupiter.api.Disabled;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -19,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * replication drifted, HLC misordered events, or the state machine dropped a
  * write, at least one invariant on at least one node would fail.
  */
+@EnabledIfEnvironmentVariable(named = "RUN_MULTINODE_TESTS", matches = "true")
 class InvariantMultiNodeTest extends ManualClusterTestBase {
 
     @Test

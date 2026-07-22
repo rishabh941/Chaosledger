@@ -1,7 +1,12 @@
 package com.chaosledger.ledger.infrastructure.raft;
 
+import com.chaosledger.ledger.domain.IdempotencyStore;
 import com.chaosledger.ledger.domain.events.ConcurrencyException;
 import com.chaosledger.ledger.domain.events.Event;
+import com.chaosledger.ledger.domain.events.MoneyDeposited;
+import com.chaosledger.ledger.domain.events.MoneyTransferred;
+import com.chaosledger.ledger.domain.events.MoneyWithdrawn;
+import com.chaosledger.ledger.domain.events.TransferReceived;
 import com.chaosledger.ledger.domain.hlc.HlcTimestamp;
 import com.chaosledger.ledger.domain.hlc.HybridLogicalClock;
 import com.chaosledger.ledger.infrastructure.eventstore.PostgresEventStore;
@@ -15,6 +20,7 @@ import org.apache.ratis.statemachine.impl.BaseStateMachine;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -25,22 +31,12 @@ import java.util.concurrent.CompletableFuture;
  * This class deserializes the committed entry back into domain events
  * and writes them to PostgreSQL via PostgresEventStore.
  *
- * Deserialization strategy:
- * Each event is stored in the Raft log as a (typeName, json) pair
- * inside a RaftEventCommand. The typeName (e.g. "AccountOpened") is
- * used with Class.forName() to find the concrete event class — the
- * same pattern PostgresEventStore.fromEntity() uses. This keeps the
- * domain Event interface free of Jackson annotations.
- *
- * CRITICAL: This method runs on ALL nodes (leader + followers).
- * Each node independently applies the same entries in the same order,
- * so all PostgreSQL databases end up with identical data.
- * Week 9 change: When applying a committed entry, the state machine now:
- *  1. Extracts the leader's HLC timestamp from the RaftEventCommand
- *  2. Calls hlc.update(leaderTimestamp) to advance the local clock
- *  3. Passes the HLC timestamp to PostgresEventStore.appendWithHlc()
- * This ensures every node's HLC stays causally consistent with the leader,
- * even if the follower's wall clock is behind.
+ * Week 12 fix: After persisting events, the state machine now also
+ * records idempotency keys in processed_commands. This ensures all
+ * nodes have the same idempotency state — not just the leader that
+ * originally handled the command. Without this, a retry after leader
+ * failover would bypass the idempotency check and apply the write
+ * twice (Bug #X — found by chaos scenario 7.3).
  */
 @Slf4j
 public class LedgerStateMachine extends BaseStateMachine {
@@ -51,21 +47,18 @@ public class LedgerStateMachine extends BaseStateMachine {
     private final PostgresEventStore postgresEventStore;
     private final ObjectMapper objectMapper;
     private final HybridLogicalClock hlc;
+    private final IdempotencyStore idempotencyStore;
 
     public LedgerStateMachine(PostgresEventStore postgresEventStore,
                               ObjectMapper objectMapper,
-                              HybridLogicalClock hlc) {
+                              HybridLogicalClock hlc,
+                              IdempotencyStore idempotencyStore) {
         this.postgresEventStore = postgresEventStore;
         this.objectMapper = objectMapper;
         this.hlc = hlc;
+        this.idempotencyStore = idempotencyStore;
     }
 
-    /**
-     * Called when a Raft log entry is COMMITTED (majority has it).
-     * Runs on ALL nodes — leader AND followers.
-     * Each node applies the same entries in the same order,
-     * so all PostgreSQL databases end up identical.
-     */
     @Override
     public CompletableFuture<Message> applyTransaction(
             TransactionContext trx) {
@@ -74,12 +67,10 @@ public class LedgerStateMachine extends BaseStateMachine {
         TermIndex termIndex = TermIndex.valueOf(entry);
 
         try {
-            // 1. Extract serialized command from the log entry
             ByteString logData = entry.getStateMachineLogEntry()
                     .getLogData();
             byte[] bytes = logData.toByteArray();
 
-            // 2. Deserialize the envelope
             RaftEventCommand cmd = objectMapper.readValue(
                     bytes, RaftEventCommand.class);
 
@@ -93,25 +84,20 @@ public class LedgerStateMachine extends BaseStateMachine {
                         cmd.hlcLogicalCounter(),
                         cmd.hlcNodeId());
 
-                // Update local HLC — ensures this node's clock
-                // stays >= the leader's timestamp
                 hlc.update(leaderHlc);
                 log.debug("HLC updated from leader timestamp: {}", leaderHlc);
             }
 
-            // 3. Reconstruct Event objects from type name + JSON
-            //    Same pattern as PostgresEventStore.fromEntity()
             List<Event> events = cmd.entries().stream()
                     .map(this::deserializeEvent)
                     .toList();
 
             log.info("Applying committed entry [term={}, index={}]: "
-                            + "aggregateId={}, expectedVersion={}, eventCount={}, hlc{}",
+                            + "aggregateId={}, expectedVersion={}, eventCount={}, hlc={}",
                     termIndex.getTerm(), termIndex.getIndex(),
                     cmd.aggregateId(), cmd.expectedVersion(),
                     events.size(), leaderHlc);
 
-            // Week 9: Use appendWithHlc if HLC timestamp is present
             if (leaderHlc != null) {
                 postgresEventStore.appendWithHlc(
                         cmd.aggregateId(),
@@ -119,13 +105,17 @@ public class LedgerStateMachine extends BaseStateMachine {
                         events,
                         leaderHlc);
             } else {
-                // Backward compatibility for entries committed
-                // before Week 9 (no HLC in the log)
                 postgresEventStore.append(
                         cmd.aggregateId(),
                         cmd.expectedVersion(),
                         events);
             }
+
+            // ── Week 12 fix: replicate idempotency keys ────────
+            // Record idempotency keys from committed events so ALL
+            // nodes (not just the leader) have them. This prevents
+            // duplicate writes after leader failover.
+            recordIdempotencyKeys(events, cmd.aggregateId());
 
             log.debug("Successfully applied entry [index={}] to Postgres",
                     termIndex.getIndex());
@@ -134,9 +124,6 @@ public class LedgerStateMachine extends BaseStateMachine {
                     Message.valueOf("OK"));
 
         } catch (ConcurrencyException e) {
-            // This can happen if the state machine replays entries
-            // after a restart. The events are already in Postgres
-            // from a previous apply — safe to skip.
             log.warn("ConcurrencyException applying entry [index={}]: {}. "
                             + "This may be a replay after restart — already applied.",
                     termIndex.getIndex(), e.getMessage());
@@ -151,15 +138,51 @@ public class LedgerStateMachine extends BaseStateMachine {
     }
 
     /**
-     * Deserialize a single event from its type name and JSON string.
-     * Uses Class.forName() — the same approach as PostgresEventStore.
-     *
-     * Example:
-     *   eventType = "AccountOpened"
-     *   eventJson = {"eventId":"...", "aggregateId":"...", ...}
-     *   → resolves to com.chaosledger.ledger.domain.events.AccountOpened
-     *   → Jackson deserializes the JSON into that class
+     * Extract idempotency keys from committed events and record them
+     * in processed_commands. Uses recordIfAbsent to handle:
+     *   - Leader: key already recorded by AccountCommandHandler
+     *   - Followers: key not yet recorded, needs to be added
+     *   - Replays after restart: key already exists, skip safely
      */
+    private void recordIdempotencyKeys(List<Event> events, UUID aggregateId) {
+        for (Event event : events) {
+            try {
+                UUID key = extractIdempotencyKey(event);
+                String type = extractCommandType(event);
+                if (key != null) {
+                    idempotencyStore.recordIfAbsent(key, type, aggregateId);
+                    log.debug("Recorded idempotency key {} for {} on this node",
+                            key, type);
+                }
+            } catch (Exception e) {
+                // Never fail the state machine apply for idempotency
+                // recording — the event is already committed
+                log.warn("Failed to record idempotency key from {}: {}",
+                        event.getClass().getSimpleName(), e.getMessage());
+            }
+        }
+    }
+
+    private UUID extractIdempotencyKey(Event event) {
+        return switch (event) {
+            case MoneyDeposited e -> e.idempotencyKey();
+            case MoneyWithdrawn e -> e.idempotencyKey();
+            case MoneyTransferred e -> e.idempotencyKey();
+            case TransferReceived e -> e.idempotencyKey();
+            default -> null;
+        };
+    }
+
+    private String extractCommandType(Event event) {
+        return switch (event) {
+            case MoneyDeposited ignored -> "Deposit";
+            case MoneyWithdrawn ignored -> "Withdraw";
+            case MoneyTransferred ignored -> "Transfer";
+            case TransferReceived ignored -> "TransferReceived";
+            default -> "Unknown";
+        };
+    }
+
     private Event deserializeEvent(RaftEventCommand.RaftEventEntry entry) {
         try {
             String fqcn = EVENT_PACKAGE + entry.eventType();
@@ -176,11 +199,6 @@ public class LedgerStateMachine extends BaseStateMachine {
         }
     }
 
-    /**
-     * Called for read-only queries. Reads bypass Raft consensus —
-     * they go directly to the local PostgreSQL via the REST
-     * controllers and PostgresEventStore.loadEvents().
-     */
     @Override
     public CompletableFuture<Message> query(Message request) {
         return CompletableFuture.completedFuture(

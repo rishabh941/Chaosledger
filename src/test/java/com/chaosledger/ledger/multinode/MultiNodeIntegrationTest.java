@@ -3,6 +3,7 @@ package com.chaosledger.ledger.multinode;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -17,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * every follower and that follower reads return the same data as the
  * leader eventually.
  */
+@EnabledIfEnvironmentVariable(named = "RUN_MULTINODE_TESTS", matches = "true")
 class MultiNodeIntegrationTest extends ManualClusterTestBase {
 
     @Test
