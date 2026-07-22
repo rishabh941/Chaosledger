@@ -263,6 +263,47 @@ public class ClusterClient {
         }
     }
 
+    public void setClockOffset(int nodeIdx, long offsetMillis) {
+        postJson(nodeIdx, "/api/debug/clock-offset", Map.of("offsetMillis", offsetMillis), 200);
+    }
+
+    public long getClockOffset(int nodeIdx) {
+        JsonNode node = getJson(nodeIdx, "/api/debug/clock-offset");
+        return node.path("offsetMillis").asLong(0);
+    }
+
+    /** Writes directly to a specific node, bypassing leader auto-discovery. */
+    public void depositDirect(int nodeIdx, UUID accountId, BigDecimal amount, UUID idempotencyKey) {
+        Map<String, Object> body = Map.of(
+                "amount", amount.toPlainString(),
+                "idempotencyKey", idempotencyKey.toString());
+        postJson(nodeIdx, "/api/accounts/" + accountId + "/deposit", body, 200);
+    }
+
+    public Map<String, Object> getKafkaStats(int nodeIdx) {
+        JsonNode node = getJson(nodeIdx, "/api/debug/kafka/stats");
+        return MAPPER.convertValue(node, new com.fasterxml.jackson.core.type.TypeReference<>() {});
+    }
+
+    public void publishRawToKafka(int nodeIdx, String rawBody) {
+        // POST raw string — the endpoint accepts text/plain
+        String url = nodeUrls.get(nodeIdx) + "/api/debug/kafka/publish-raw";
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(java.net.URI.create(url))
+                .timeout(java.time.Duration.ofSeconds(10))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(rawBody))
+                .build();
+        HttpResponse<String> resp = send(req);
+        if (resp.statusCode() != 200) {
+            throw new RuntimeException("publish-raw failed: HTTP " + resp.statusCode());
+        }
+    }
+
+    public void resetKafkaCounters(int nodeIdx) {
+        postJson(nodeIdx, "/api/debug/kafka/reset-counters", Map.of(), 200);
+    }
+
     // ── Debug helpers ───────────────────────────────────────────────
 
     public Map<String, Object> snapshotAllNodes() {

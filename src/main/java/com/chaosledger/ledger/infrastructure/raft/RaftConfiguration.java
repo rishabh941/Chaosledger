@@ -2,6 +2,7 @@ package com.chaosledger.ledger.infrastructure.raft;
 
 import com.chaosledger.ledger.domain.hlc.HybridLogicalClock;
 import com.chaosledger.ledger.infrastructure.eventstore.PostgresEventStore;
+import com.chaosledger.ledger.infrastructure.kafka.KafkaEventPublisher;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ratis.client.RaftClient;
@@ -12,6 +13,7 @@ import org.apache.ratis.protocol.*;
 import org.apache.ratis.server.RaftServer;
 import org.apache.ratis.server.RaftServerConfigKeys;
 import org.apache.ratis.util.TimeDuration;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -59,9 +61,12 @@ public class RaftConfiguration {
     public LedgerStateMachine ledgerStateMachine(PostgresEventStore postgresEventStore,
                                                  ObjectMapper objectMapper,
                                                  HybridLogicalClock hlc,
-                                                 IdempotencyStore idempotencyStore) {
-        log.info("Creating LedgerStateMachine");
-        return new LedgerStateMachine(postgresEventStore, objectMapper, hlc, idempotencyStore);
+                                                 IdempotencyStore idempotencyStore,
+                                                 @Autowired(required = false)
+                                                 KafkaEventPublisher kafkaPublisher) {
+        log.info("Creating LedgerStateMachine (kafka={})", kafkaPublisher != null);
+        return new LedgerStateMachine(postgresEventStore, objectMapper, hlc,
+                idempotencyStore, kafkaPublisher);
     }
 
     @Bean

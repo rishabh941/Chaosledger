@@ -1,5 +1,6 @@
 package com.chaosledger.ledger.infrastructure.hlc;
 
+import com.chaosledger.ledger.domain.hlc.AdjustableClock;
 import com.chaosledger.ledger.domain.hlc.HybridLogicalClock;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,8 +21,14 @@ public class HlcConfiguration {
     private String nodeId;
 
     @Bean
-    public HybridLogicalClock hybridLogicalClock() {
-        log.info("Creating HybridLogicalClock for node: {}", nodeId);
-        return new HybridLogicalClock(nodeId);
+    public AdjustableClock adjustableClock() {
+        return new AdjustableClock();
     }
+
+    @Bean
+    public HybridLogicalClock hybridLogicalClock(AdjustableClock adjustableClock) {
+        log.info("Creating HybridLogicalClock for node: {}", nodeId);
+        return new HybridLogicalClock(nodeId, adjustableClock);
+    }
+
 }

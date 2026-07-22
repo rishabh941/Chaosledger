@@ -1,5 +1,6 @@
 package com.chaosledger.ledger.infrastructure.raft;
 
+
 import com.chaosledger.ledger.domain.IdempotencyStore;
 import com.chaosledger.ledger.domain.events.ConcurrencyException;
 import com.chaosledger.ledger.domain.events.Event;
@@ -18,6 +19,7 @@ import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.ratis.statemachine.TransactionContext;
 import org.apache.ratis.statemachine.impl.BaseStateMachine;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
+import com.chaosledger.ledger.infrastructure.kafka.KafkaEventPublisher;
 
 import java.util.List;
 import java.util.UUID;
@@ -48,15 +50,18 @@ public class LedgerStateMachine extends BaseStateMachine {
     private final ObjectMapper objectMapper;
     private final HybridLogicalClock hlc;
     private final IdempotencyStore idempotencyStore;
+    private final KafkaEventPublisher kafkaPublisher;
 
     public LedgerStateMachine(PostgresEventStore postgresEventStore,
                               ObjectMapper objectMapper,
                               HybridLogicalClock hlc,
-                              IdempotencyStore idempotencyStore) {
+                              IdempotencyStore idempotencyStore,
+                              KafkaEventPublisher kafkaPublisher) {
         this.postgresEventStore = postgresEventStore;
         this.objectMapper = objectMapper;
         this.hlc = hlc;
         this.idempotencyStore = idempotencyStore;
+        this.kafkaPublisher = kafkaPublisher;
     }
 
     @Override

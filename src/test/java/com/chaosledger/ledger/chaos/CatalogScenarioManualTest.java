@@ -144,13 +144,13 @@ public class CatalogScenarioManualTest extends ManualChaosTestBase {
         // ── Heal: restart crashed leader ──
         chaosEngine.healPartition(leaderNodeId);
         startContainer(leaderService);
-        sleep(12000); // Windows containers take longer to restart
+        sleep(20000); // Windows containers take longer to restart
 
         // ── Verify recovery ──
         waitForBalanceResilient(leaderIdx, account1,
-                new BigDecimal("8000.00"), Duration.ofSeconds(30));
+                new BigDecimal("8000.00"), Duration.ofSeconds(45));
         waitForBalanceResilient(leaderIdx, account2,
-                new BigDecimal("7000.00"), Duration.ofSeconds(30));
+                new BigDecimal("7000.00"), Duration.ofSeconds(45));
 
         BigDecimal b1 = client.getBalance(leaderIdx, account1);
         BigDecimal b2 = client.getBalance(leaderIdx, account2);

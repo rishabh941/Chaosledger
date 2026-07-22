@@ -144,6 +144,12 @@ public abstract class ChaosTestBase {
             catch (Exception ignored) { }
         }
 
+        // Week 13: also reset any clock skew left over from scenario 3.1
+        for (int i = 0; i < 3; i++) {
+            try { client.setClockOffset(i, 0); }
+            catch (Exception ignored) { }
+        }
+
         // Give containers a moment to stabilise
         sleep(2000);
 

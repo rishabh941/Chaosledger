@@ -162,6 +162,17 @@
 			<artifactId>ratis-grpc</artifactId>
 			<version>${ratis.version}</version>
 		</dependency>
+		<!-- Kafka — minimal event publishing after Raft commit (Week 13) -->
+		<dependency>
+			<groupId>org.springframework.kafka</groupId>
+			<artifactId>spring-kafka</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.kafka</groupId>
+			<artifactId>spring-kafka-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
 <!--		&lt;!&ndash; jqwik Spring integration (for tests needing Spring context) &ndash;&gt;-->
 <!--		<dependency>-->
 <!--			<groupId>net.jqwik</groupId>-->

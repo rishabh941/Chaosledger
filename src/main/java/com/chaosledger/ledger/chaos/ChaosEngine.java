@@ -150,6 +150,35 @@ public class ChaosEngine {
         slowNetwork(nodeId, latencyMs, 0);
     }
 
+    // ── Asymmetric partition (Week 13) ──────────────────────────
+
+    public enum AsymmetricDirection { CANNOT_SEND, CANNOT_RECEIVE }
+
+    /**
+     * Block ONE direction of a node's Raft traffic, leaving the other open.
+     * Uses a bandwidth toxic capped at 0 KB/s rather than a timeout toxic —
+     * the connection stays open (as a real saturated/misrouted link would),
+     * instead of repeatedly closing and reopening.
+     */
+    public void partitionAsymmetric(int nodeId, AsymmetricDirection direction) {
+        String proxy = raftProxy(nodeId);
+        String stream = direction == AsymmetricDirection.CANNOT_RECEIVE ? "upstream" : "downstream";
+        String toxicName = "asym-" + direction.name().toLowerCase() + "-" + nodeId;
+        toxiproxy.addBandwidth(proxy, toxicName, 0, stream);
+        recordEvent("ASYMMETRIC_PARTITION", "Node " + nodeId + " "
+                + (direction == AsymmetricDirection.CANNOT_RECEIVE
+                ? "cannot receive (upstream throttled to 0)"
+                : "cannot send (downstream throttled to 0)"));
+        log.info("CHAOS: Node {} asymmetric partition — {}", nodeId, direction);
+    }
+
+    public void healAsymmetricPartition(int nodeId) {
+        String proxy = raftProxy(nodeId);
+        safeRemoveToxic(proxy, "asym-cannot_receive-" + nodeId);
+        safeRemoveToxic(proxy, "asym-cannot_send-" + nodeId);
+        recordEvent("HEAL_ASYMMETRIC", "Node " + nodeId + " asymmetric partition healed");
+    }
+
     /**
      * Remove latency toxics from a node.
      */

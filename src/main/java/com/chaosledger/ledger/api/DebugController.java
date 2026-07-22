@@ -1,5 +1,6 @@
 package com.chaosledger.ledger.api;
 
+import com.chaosledger.ledger.domain.hlc.AdjustableClock;
 import com.chaosledger.ledger.infrastructure.eventstore.EventEntity;
 import com.chaosledger.ledger.infrastructure.eventstore.EventRepository;
 import lombok.RequiredArgsConstructor;
@@ -7,10 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -89,6 +87,26 @@ public class DebugController {
         row.put("hlcNodeId", e.getHlcNodeId());
         row.put("createdAt", e.getCreatedAt());
         return row;
+    }
+
+    // add to the existing constructor-injected fields:
+    private final AdjustableClock adjustableClock;
+
+    @GetMapping("/clock-offset")
+    public ResponseEntity<Map<String, Object>> getClockOffset() {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("offsetMillis", adjustableClock.getOffsetMillis());
+        return ResponseEntity.ok(body);
+    }
+
+    @PostMapping("/clock-offset")
+    public ResponseEntity<Map<String, Object>> setClockOffset(@RequestBody Map<String, Object> req) {
+        long offset = ((Number) req.getOrDefault("offsetMillis", 0)).longValue();
+        adjustableClock.setOffsetMillis(offset);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("offsetMillis", adjustableClock.getOffsetMillis());
+        body.put("appliedAt", Instant.now());
+        return ResponseEntity.ok(body);
     }
 
     /**
