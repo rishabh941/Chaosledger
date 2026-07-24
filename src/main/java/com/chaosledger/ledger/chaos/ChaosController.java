@@ -1,4 +1,3 @@
-// src/main/java/com/chaosledger/ledger/chaos/ChaosController.java
 package com.chaosledger.ledger.chaos;
 
 import lombok.extern.slf4j.Slf4j;
@@ -55,6 +54,13 @@ public class ChaosController {
     public ResponseEntity<Map<String, String>> partition(@PathVariable int nodeId) {
         chaosEngine.partitionNode(nodeId);
         return ResponseEntity.ok(Map.of("action", "partitioned",
+                "node", String.valueOf(nodeId)));
+    }
+
+    @PostMapping("/partition-hard/{nodeId}")
+    public ResponseEntity<Map<String, String>> partitionHard(@PathVariable int nodeId) {
+        chaosEngine.partitionNodeHard(nodeId);
+        return ResponseEntity.ok(Map.of("action", "hard_partitioned",
                 "node", String.valueOf(nodeId)));
     }
 

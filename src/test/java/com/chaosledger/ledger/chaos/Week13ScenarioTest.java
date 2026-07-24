@@ -1,4 +1,3 @@
-// src/test/java/com/chaosledger/ledger/chaos/Week13ScenarioTest.java
 package com.chaosledger.ledger.chaos;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -32,9 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class Week13ScenarioTest extends ChaosTestBase {
 
-    // ══════════════════════════════════════════════════════════════
     // Scenario 2.2 — Asymmetric Partition
-    // ══════════════════════════════════════════════════════════════
     //
     // Hypothesis: If a follower can send Raft messages but not receive
     //   them (or vice versa), the cluster still converges on a single
@@ -43,13 +40,12 @@ public class Week13ScenarioTest extends ChaosTestBase {
     // Failure mode: One-directional network failure — asymmetric
     //   routing, a one-way firewall rule, or a NIC with a stuck
     //   receive queue.
-    // ══════════════════════════════════════════════════════════════
 
     @Test
     @Order(1)
     @DisplayName("2.2 asymmetric-partition")
     void scenario_2_2_asymmetricPartition() {
-        // ── Steady state ──
+        // Steady state
         UUID account = client.openAccount(UUID.randomUUID(), "INR");
         client.deposit(account, new BigDecimal("12000.00"), UUID.randomUUID());
 
@@ -63,11 +59,11 @@ public class Week13ScenarioTest extends ChaosTestBase {
         int stableIdx = (leaderIdx + 2) % 3;
         int targetNodeId = nodeIdFromIdx(targetIdx);
 
-        // ── Inject: target node can SEND but cannot RECEIVE Raft traffic ──
+        // Inject: target node can SEND but cannot RECEIVE Raft traffic
         chaosEngine.partitionAsymmetric(targetNodeId, ChaosEngine.AsymmetricDirection.CANNOT_RECEIVE);
         sleep(3000); // let Raft heartbeats notice the one-way failure
 
-        // ── Verify: exactly one leader; writes still succeed ──
+        // Verify: exactly one leader; writes still succeed
         int leaderDuringFault = client.findLeader();
         client.deposit(account, new BigDecimal("500.00"), UUID.randomUUID());
 
@@ -85,11 +81,11 @@ public class Week13ScenarioTest extends ChaosTestBase {
                 .as("Exactly one leader during asymmetric partition")
                 .isEqualTo(1);
 
-        // ── Heal ──
+        // Heal
         chaosEngine.healAsymmetricPartition(targetNodeId);
         sleep(5000);
 
-        // ── Verify recovery ──
+        // Verify recovery
         for (int i = 0; i < 3; i++) {
             client.waitForBalance(i, account, new BigDecimal("12500.00"), Duration.ofSeconds(20));
         }
@@ -103,9 +99,7 @@ public class Week13ScenarioTest extends ChaosTestBase {
         System.out.println("[2.2] asymmetric-partition PASSED.");
     }
 
-    // ══════════════════════════════════════════════════════════════
     // Scenario 2.7 — Split-Brain With Write Acceptance
-    // ══════════════════════════════════════════════════════════════
     //
     // Hypothesis: While the old leader is isolated, no two nodes ever
     //   simultaneously report LEADER, and any write sent directly to
@@ -114,13 +108,12 @@ public class Week13ScenarioTest extends ChaosTestBase {
     //
     // Failure mode: Leader network partition, instrumented during the
     //   fault window instead of only after recovery.
-    // ══════════════════════════════════════════════════════════════
 
     @Test
     @Order(2)
     @DisplayName("2.7 split-brain-with-write-acceptance")
     void scenario_2_7_splitBrainWithWriteAcceptance() {
-        // ── Steady state ──
+        // Steady state
         UUID account = client.openAccount(UUID.randomUUID(), "INR");
         client.deposit(account, new BigDecimal("20000.00"), UUID.randomUUID());
 
@@ -190,7 +183,7 @@ public class Week13ScenarioTest extends ChaosTestBase {
                     .isEqualByComparingTo(new BigDecimal("20000.00"));
         }
 
-        // ── Heal ──
+        // Heal
         chaosEngine.healPartition(leaderNodeId);
         sleep(8000);
 
@@ -208,20 +201,17 @@ public class Week13ScenarioTest extends ChaosTestBase {
                 rogueWriteAccepted);
     }
 
-    // ══════════════════════════════════════════════════════════════
     // Scenario 3.1 — Clock Drift Forward 2s
-    // ══════════════════════════════════════════════════════════════
     //
     // Hypothesis: A node whose wall clock drifts 2s forward has its
     //   HLC absorb the skew without going backward, without corrupting
     //   replication, and without regressing once the skew is removed.
-    // ══════════════════════════════════════════════════════════════
 
     @Test
     @Order(3)
     @DisplayName("3.1 clock-drift-forward-2s")
     void scenario_3_1_clockDriftForward2s() {
-        // ── Steady state ──
+        // Steady state
         UUID account = client.openAccount(UUID.randomUUID(), "INR");
         client.deposit(account, new BigDecimal("9000.00"), UUID.randomUUID());
 
@@ -258,7 +248,7 @@ public class Week13ScenarioTest extends ChaosTestBase {
             client.waitForBalance(i, account, new BigDecimal("9100.00"), Duration.ofSeconds(10));
         }
 
-        // ── Heal: remove the clock skew ──
+        // Heal: remove the clock skew
         client.setClockOffset(driftIdx, 0);
         sleep(1000);
 
@@ -277,15 +267,12 @@ public class Week13ScenarioTest extends ChaosTestBase {
         System.out.println("[3.1] clock-drift-forward-2s PASSED.");
     }
 
-    // ══════════════════════════════════════════════════════════════
     // Scenario 5.3 — Poison Pill Message (STUBBED — needs Kafka)
-    // ══════════════════════════════════════════════════════════════
     //
     // Status: Kafka is not yet wired into ChaosLedger. Per the Week 12
     //   guide's own guidance, this scenario is stubbed with a clear
     //   reason rather than silently dropped. CHAOS_CATALOG.md records
     //   it as "not yet implemented," not "passing."
-    // ══════════════════════════════════════════════════════════════
 
     @Test
     @Order(4)
@@ -297,9 +284,7 @@ public class Week13ScenarioTest extends ChaosTestBase {
         // Intentionally empty. See class javadoc above and CHAOS_CATALOG.md.
     }
 
-    // ══════════════════════════════════════════════════════════════
     // Scenario 7.1 — Concurrent Transfer, Same Source Account
-    // ══════════════════════════════════════════════════════════════
     //
     // Hypothesis: Two concurrent transfers withdrawing from the SAME
     //   account race against each other. OCC (the unique
@@ -307,13 +292,12 @@ public class Week13ScenarioTest extends ChaosTestBase {
     //   one racing writer wins; the loser is rejected, not double-applied.
     //
     // Failure mode: Application-level race — no network chaos involved.
-    // ══════════════════════════════════════════════════════════════
 
     @Test
     @Order(5)
     @DisplayName("7.1 concurrent-transfer-same-account")
     void scenario_7_1_concurrentTransferSameAccount() throws Exception {
-        // ── Steady state ──
+        // Steady state
         UUID source = client.openAccount(UUID.randomUUID(), "INR");
         UUID destA = client.openAccount(UUID.randomUUID(), "INR");
         UUID destB = client.openAccount(UUID.randomUUID(), "INR");
@@ -359,7 +343,7 @@ public class Week13ScenarioTest extends ChaosTestBase {
         fb.get(30, TimeUnit.SECONDS);
         pool.shutdown();
 
-        // ── Verify hypothesis: exactly one transfer wins ──
+        // Verify hypothesis: exactly one transfer wins
         assertThat(succeeded.get())
                 .as("Exactly one of the two racing 700-transfers should succeed")
                 .isEqualTo(1);

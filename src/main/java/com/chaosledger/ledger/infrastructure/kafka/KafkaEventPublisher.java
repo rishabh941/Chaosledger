@@ -1,4 +1,3 @@
-// src/main/java/com/chaosledger/ledger/infrastructure/kafka/KafkaEventPublisher.java
 package com.chaosledger.ledger.infrastructure.kafka;
 
 import com.chaosledger.ledger.domain.events.Event;

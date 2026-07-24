@@ -50,12 +50,12 @@ public class ClusterClient {
                 .build();
     }
 
-    // ── Node addressing ─────────────────────────────────────────────
+    // Node addressing
 
     public int nodeCount() { return nodeUrls.size(); }
     public String nodeUrl(int idx) { return nodeUrls.get(idx); }
 
-    // ── Leader discovery ────────────────────────────────────────────
+    // Leader discovery
 
     public int waitForLeaderElection(Duration timeout) {
         int[] holder = new int[]{-1};
@@ -93,7 +93,7 @@ public class ClusterClient {
         return idx;
     }
 
-    // ── Write operations (always via leader) ────────────────────────
+    // Write operations (always via leader)
 
     public UUID openAccount(UUID ownerId, String currency) {
         Map<String, Object> body = Map.of(
@@ -127,7 +127,7 @@ public class ClusterClient {
         return UUID.fromString(resp.path("transferId").asText());
     }
 
-    // ── Read operations (any node) ──────────────────────────────────
+    // Read operations (any node)
 
     public JsonNode getAccount(int nodeIdx, UUID accountId) {
         return getJson(nodeIdx, "/api/accounts/" + accountId);
@@ -160,7 +160,7 @@ public class ClusterClient {
         return postJson(nodeIdx, "/api/invariants/run", Map.of(), 200);
     }
 
-    // ── Convenience assertions helpers ──────────────────────────────
+    // Convenience assertions helpers
 
     public void waitForBalance(int nodeIdx, UUID accountId,
                                BigDecimal expected, Duration timeout) {
@@ -189,7 +189,7 @@ public class ClusterClient {
                 });
     }
 
-    // ── Low-level HTTP ──────────────────────────────────────────────
+    // Low-level HTTP
 
     private JsonNode postJsonToLeader(String path, Map<String, Object> body, int expectedStatus) {
         int leaderIdx = cachedLeaderIdx >= 0 ? cachedLeaderIdx : findLeader();
@@ -304,7 +304,7 @@ public class ClusterClient {
         postJson(nodeIdx, "/api/debug/kafka/reset-counters", Map.of(), 200);
     }
 
-    // ── Debug helpers ───────────────────────────────────────────────
+    // Debug helpers
 
     public Map<String, Object> snapshotAllNodes() {
         Map<String, Object> snap = new LinkedHashMap<>();

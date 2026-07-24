@@ -46,7 +46,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class WithdrawDepositSymmetryPropertyTest {
 
-    // ─── Test 1: Basic symmetry — withdraw X then deposit X ─────────
+    // Test 1: Basic symmetry — withdraw X then deposit X
 
     @Property(tries = 1000)
     @Report(Reporting.GENERATED)
@@ -61,7 +61,7 @@ class WithdrawDepositSymmetryPropertyTest {
         UUID accountId = UUID.randomUUID();
         UUID ownerId = UUID.randomUUID();
 
-        // ── Build initial state: open + deposit ──
+        // Build initial state: open + deposit
         List<Event> events = new ArrayList<>();
         events.add(LedgerArbitraries.openEvent(accountId, ownerId));
         events.add(LedgerArbitraries.depositEvent(accountId, initialDeposit));
@@ -70,27 +70,27 @@ class WithdrawDepositSymmetryPropertyTest {
         BigDecimal balanceBefore = before.getBalance().amount();
         long versionBefore = before.getVersion();
 
-        // ── Withdraw X ──
+        // Withdraw X
         events.add(LedgerArbitraries.withdrawEvent(accountId, roundTripAmount));
 
-        // ── Deposit X back ──
+        // Deposit X back
         events.add(LedgerArbitraries.depositEvent(accountId, roundTripAmount));
 
         Account after = Account.reconstitute(events);
 
-        // ── Assert: balance is exactly the same ──
+        // Assert: balance is exactly the same
         assertThat(after.getBalance().amount())
                 .as("Balance after withdraw(%s) then deposit(%s) must equal original",
                         roundTripAmount, roundTripAmount)
                 .isEqualByComparingTo(balanceBefore);
 
-        // ── Assert: version increased by exactly 2 ──
+        // Assert: version increased by exactly 2
         assertThat(after.getVersion())
                 .as("Version should increase by 2 (one withdraw + one deposit event)")
                 .isEqualTo(versionBefore + 2);
     }
 
-    // ─── Test 2: Reverse symmetry — deposit X then withdraw X ───────
+    // Test 2: Reverse symmetry — deposit X then withdraw X
 
     @Property(tries = 1000)
     @Report(Reporting.GENERATED)
@@ -123,7 +123,7 @@ class WithdrawDepositSymmetryPropertyTest {
                 .isEqualByComparingTo(BigDecimal.ZERO);
     }
 
-    // ─── Test 3: Transfer symmetry — transfer A→B then B→A ──────────
+    // Test 3: Transfer symmetry — transfer A→B then B→A
 
     @Property(tries = 500)
     @Report(Reporting.GENERATED)
@@ -139,7 +139,7 @@ class WithdrawDepositSymmetryPropertyTest {
         UUID accountB = UUID.randomUUID();
         UUID owner = UUID.randomUUID();
 
-        // ── Setup accounts ──
+        // Setup accounts
         List<Event> eventsA = new ArrayList<>();
         eventsA.add(LedgerArbitraries.openEvent(accountA, owner));
         eventsA.add(LedgerArbitraries.depositEvent(accountA, depositA));
@@ -153,19 +153,19 @@ class WithdrawDepositSymmetryPropertyTest {
         BigDecimal balanceB_before = Account.reconstitute(
                 new ArrayList<>(eventsB)).getBalance().amount();
 
-        // ── Transfer A → B ──
+        // Transfer A → B
         eventsA.add(LedgerArbitraries.transferEvent(
                 accountA, accountB, transferAmount));
         eventsB.add(LedgerArbitraries.transferReceivedEvent(
                 accountB, accountA, transferAmount));
 
-        // ── Reverse: Transfer B → A ──
+        // Reverse: Transfer B → A
         eventsB.add(LedgerArbitraries.transferEvent(
                 accountB, accountA, transferAmount));
         eventsA.add(LedgerArbitraries.transferReceivedEvent(
                 accountA, accountB, transferAmount));
 
-        // ── Assert: both balances back to original ──
+        // Assert: both balances back to original
         BigDecimal balanceA_after = Account.reconstitute(eventsA)
                 .getBalance().amount();
         BigDecimal balanceB_after = Account.reconstitute(eventsB)
@@ -179,7 +179,6 @@ class WithdrawDepositSymmetryPropertyTest {
                 .isEqualByComparingTo(balanceB_before);
     }
 
-    // ─── Generators ─────────────────────────────────────────────────
 
     @Provide
     Arbitrary<BigDecimal> initialAmounts() {

@@ -1,4 +1,3 @@
-// src/main/java/com/chaosledger/ledger/api/KafkaDebugController.java
 package com.chaosledger.ledger.api;
 
 import com.chaosledger.ledger.infrastructure.kafka.KafkaEventConsumer;

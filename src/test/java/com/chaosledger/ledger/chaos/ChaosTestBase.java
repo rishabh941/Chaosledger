@@ -1,4 +1,3 @@
-// src/test/java/com/chaosledger/ledger/chaos/ChaosTestBase.java
 package com.chaosledger.ledger.chaos;
 
 import com.chaosledger.ledger.multinode.ClusterClient;
@@ -157,7 +156,7 @@ public abstract class ChaosTestBase {
         client.waitForLeaderElection(Duration.ofSeconds(30));
     }
 
-    // ── Container control (reused from ClusterTestBase pattern) ──
+    // Container control (reused from ClusterTestBase pattern)
 
     protected static void stopContainer(String serviceName) {
         Container c = resolveContainer(serviceName);
@@ -196,7 +195,6 @@ public abstract class ChaosTestBase {
         return matches.get(0);
     }
 
-    // ── Helpers ─────────────────────────────────────────────────
 
     protected static String nodeUrl(String service, int port) {
         String host = cluster.getServiceHost(service, port);

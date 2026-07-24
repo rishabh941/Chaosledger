@@ -1,4 +1,3 @@
-// src/test/java/com/chaosledger/ledger/chaos/ReplayTest.java
 package com.chaosledger.ledger.chaos;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -33,7 +32,7 @@ public class ReplayTest extends ChaosTestBase {
             client.waitForBalance(i, account, new BigDecimal("4000.00"), Duration.ofSeconds(10));
         }
 
-        // ── Record a small, safe sequence: partition a follower, heal it ──
+        // Record a small, safe sequence: partition a follower, heal it
         int followerIdx = (leaderIdx + 1) % 3;
         int followerNodeId = nodeIdFromIdx(followerIdx);
 
@@ -49,17 +48,17 @@ public class ReplayTest extends ChaosTestBase {
         Path logFile = Path.of("target", "chaos-replay", "sample-run.json");
         ChaosReplay.save(recorded, logFile);
 
-        // ── Reload from disk (simulating "share this run with a teammate") ──
+        // Reload from disk (simulating "share this run with a teammate")
         List<ChaosEngine.ChaosEvent> reloaded = ChaosReplay.load(logFile);
         assertThat(reloaded).hasSize(recorded.size());
         assertThat(reloaded.get(0).action()).isEqualTo(recorded.get(0).action());
 
-        // ── Heal fully, then replay the reloaded sequence ──
+        // Heal fully, then replay the reloaded sequence
         chaosEngine.healAll();
         chaosEngine.clearEventLog();
         ChaosReplay.replay(chaosEngine, reloaded, 2000);
 
-        // ── Cluster should be healthy and consistent after replay ──
+        // Cluster should be healthy and consistent after replay
         chaosEngine.healAll();
         sleep(3000);
         client.waitForLeaderElection(Duration.ofSeconds(20));

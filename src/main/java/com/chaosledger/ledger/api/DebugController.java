@@ -74,7 +74,6 @@ public class DebugController {
         return ResponseEntity.ok(body);
     }
 
-    // ── Helpers ────────────────────────────────────────────────
 
     private Map<String, Object> toMap(EventEntity e) {
         Map<String, Object> row = new LinkedHashMap<>();

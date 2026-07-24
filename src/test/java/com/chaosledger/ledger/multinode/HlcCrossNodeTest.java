@@ -172,7 +172,6 @@ class HlcCrossNodeTest extends ManualClusterTestBase {
                 .isGreaterThanOrEqualTo(beforePhysical);
     }
 
-// ── Helpers ─────────────────────────────────────────
 
     private long highestPhysicalTime() {
         long best = -1;

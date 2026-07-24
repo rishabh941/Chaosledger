@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ── PostgreSQL Instances ──
   postgres-1:
@@ -126,6 +124,16 @@ services:
       timeout: 5s
       retries: 15
       start_period: 15s
+  # ── Trust Dashboard ──────────────────────────────────────────────
+  dashboard:
+    build: ./dashboard
+    ports:
+      - "3000:3000"
+    depends_on:
+      - ledger-1
+      - ledger-2
+      - ledger-3
+    networks: [ledger-net]
 
 volumes:
   pgdata1:

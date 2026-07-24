@@ -43,9 +43,6 @@ class TransferControllerTest extends ComponentTestBaseFallback {
         eventRepo.flush();
     }
 
-    // =====================================================================
-    // Helpers
-    // =====================================================================
 
     private String openAccount(String currency) {
         var request = Map.of(
@@ -79,9 +76,7 @@ class TransferControllerTest extends ComponentTestBaseFallback {
         return rest.getForObject("/api/accounts/" + accountId, Map.class);
     }
 
-    // =====================================================================
     // Test 1: Basic transfer — happy path
-    // =====================================================================
     @Test
     @DisplayName("Transfer ₹300: sender -300, receiver +300, total unchanged")
     void transfer_movesMoneyCorrectly() {
@@ -101,9 +96,7 @@ class TransferControllerTest extends ComponentTestBaseFallback {
         assertThat(getAccount(bob).get("balance")).isEqualTo(800.0);
     }
 
-    // =====================================================================
     // Test 2: Conservation of money — total before == total after
-    // =====================================================================
     @Test
     @DisplayName("Total money in system is conserved across transfers")
     void transfer_conservesMoney() {
@@ -129,9 +122,7 @@ class TransferControllerTest extends ComponentTestBaseFallback {
         assertThat(totalAfter).isEqualTo(totalBefore);
     }
 
-    // =====================================================================
     // Test 3: Transfer to self → 400
-    // =====================================================================
     @Test
     @DisplayName("Transfer to same account → 400 BAD_REQUEST")
     void transfer_toSelf_returns400() {
@@ -145,9 +136,7 @@ class TransferControllerTest extends ComponentTestBaseFallback {
         assertThat(response.getBody().get("error")).isEqualTo("BAD_REQUEST");
     }
 
-    // =====================================================================
     // Test 4: Transfer to nonexistent account → 404
-    // =====================================================================
     @Test
     @DisplayName("Transfer to nonexistent receiver → 404")
     void transfer_toNonexistentReceiver_returns404() {
@@ -161,9 +150,7 @@ class TransferControllerTest extends ComponentTestBaseFallback {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
-    // =====================================================================
     // Test 5: Transfer with insufficient balance → 422
-    // =====================================================================
     @Test
     @DisplayName("Transfer more than sender balance → 422 INSUFFICIENT_BALANCE")
     void transfer_insufficientBalance_returns422() {
@@ -182,9 +169,7 @@ class TransferControllerTest extends ComponentTestBaseFallback {
         assertThat(getAccount(bob).get("balance")).isEqualTo(0.0);
     }
 
-    // =====================================================================
     // Test 6: Duplicate transfer idempotency key → 409
-    // =====================================================================
     @Test
     @DisplayName("Same transfer idempotencyKey twice → 409, only first executes")
     void transfer_duplicateKey_returns409() {

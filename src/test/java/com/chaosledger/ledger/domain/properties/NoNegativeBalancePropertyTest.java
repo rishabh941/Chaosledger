@@ -41,7 +41,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class NoNegativeBalancePropertyTest {
 
-    // ─── Sealed interface for random command types ───────────────────
+    // Sealed interface for random command types
     // jqwik generates a random mix of these.
     // Using sealed interface so the switch in the test is exhaustive.
 
@@ -51,7 +51,7 @@ class NoNegativeBalancePropertyTest {
 
     record WithdrawCmd(BigDecimal amount) implements LedgerCommand {}
 
-    // ─── Main property test ─────────────────────────────────────────
+    // Main property test
 
     @Property(tries = 1000)
     @Report(Reporting.GENERATED)
@@ -65,7 +65,7 @@ class NoNegativeBalancePropertyTest {
         List<Event> events = new ArrayList<>();
         events.add(LedgerArbitraries.openEvent(accountId, ownerId));
 
-        // ── Execute each command through the domain layer ──
+        // Execute each command through the domain layer
         for (LedgerCommand cmd : commands) {
             // Reconstitute current state from events
             Account current = Account.reconstitute(new ArrayList<>(events));
@@ -96,14 +96,14 @@ class NoNegativeBalancePropertyTest {
             }
         }
 
-        // ── Assert: final balance must be >= 0 ──
+        // Assert: final balance must be >= 0
         Account finalAccount = Account.reconstitute(events);
         assertThat(finalAccount.getBalance().amount())
                 .as("Balance after %d commands must be non-negative", commands.size())
                 .isGreaterThanOrEqualTo(BigDecimal.ZERO);
     }
 
-    // ─── Additional property: balance tracks correctly step-by-step ──
+    // Additional property: balance tracks correctly step-by-step
 
     @Property(tries = 500)
     @Report(Reporting.GENERATED)
@@ -145,7 +145,6 @@ class NoNegativeBalancePropertyTest {
         }
     }
 
-    // ─── Generators ─────────────────────────────────────────────────
 
     @Provide
     Arbitrary<List<LedgerCommand>> commandSequences() {

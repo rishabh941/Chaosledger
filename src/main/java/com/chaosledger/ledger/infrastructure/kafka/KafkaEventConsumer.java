@@ -1,4 +1,3 @@
-// src/main/java/com/chaosledger/ledger/infrastructure/kafka/KafkaEventConsumer.java
 package com.chaosledger.ledger.infrastructure.kafka;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -100,7 +99,7 @@ public class KafkaEventConsumer {
         }
     }
 
-    // ── Stats for debug endpoint and scenario verification ──
+    // Stats for debug endpoint and scenario verification
 
     public long getValidCount() { return validCount.get(); }
     public long getInvalidCount() { return invalidCount.get(); }

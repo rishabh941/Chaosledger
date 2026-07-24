@@ -157,7 +157,7 @@ public class InvariantCheckerService {
         return status;
     }
 
-    // ─── Private Helpers ──────────────────────────────────────────────
+    // Private Helpers
 
     private Map<UUID, List<Event>> groupAndDeserialize(List<EventEntity> entities) {
         Map<UUID, List<Event>> result = new LinkedHashMap<>();

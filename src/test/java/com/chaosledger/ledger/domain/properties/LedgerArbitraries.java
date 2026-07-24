@@ -31,12 +31,11 @@ import java.util.UUID;
  */
 public class LedgerArbitraries {
 
-    // ─── Constants ───────────────────────────────────────────────────
     private static final String DEFAULT_CURRENCY = "INR";
     private static final BigDecimal MIN_AMOUNT = new BigDecimal("0.01");
     private static final BigDecimal MAX_AMOUNT = new BigDecimal("100000.00");
 
-    // ─── Amount Generators ──────────────────────────────────────────
+    // Amount Generators
 
     /**
      * Generates valid money amounts: 0.01 to 100,000.00 with scale=2.
@@ -67,7 +66,7 @@ public class LedgerArbitraries {
                 .ofScale(2);
     }
 
-    // ─── UUID Generators ────────────────────────────────────────────
+    // UUID Generators
 
     /**
      * Generates random UUIDs for accounts and owners.
@@ -78,7 +77,7 @@ public class LedgerArbitraries {
         return Arbitraries.create(UUID::randomUUID);
     }
 
-    // ─── Sequence Generators ────────────────────────────────────────
+    // Sequence Generators
 
     /**
      * Generates a random list of deposit amounts (1 to 20 deposits).
@@ -97,7 +96,7 @@ public class LedgerArbitraries {
         return smallAmounts().list().ofMinSize(1).ofMaxSize(10);
     }
 
-    // ─── Event Factories ────────────────────────────────────────────
+    // Event Factories
     // These create domain Event objects directly, bypassing the
     // CommandHandler and REST layers. Property tests operate at the
     // domain level for speed (milliseconds per run, not seconds).

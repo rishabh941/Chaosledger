@@ -103,7 +103,7 @@ public abstract class ClusterTestBase {
         client.waitForLeaderElection(Duration.ofSeconds(30));
     }
 
-    // ── Container control (used by LeaderFailoverTest) ──────────
+    // Container control (used by LeaderFailoverTest)
 
     protected static void stopContainer(String serviceName) {
         Container c = resolveContainer(serviceName);
@@ -152,7 +152,6 @@ public abstract class ClusterTestBase {
         return matches.get(0);
     }
 
-    // ── Helpers ─────────────────────────────────────────────────
 
     private static String nodeUrl(String service, int port) {
         String host = cluster.getServiceHost(service, port);

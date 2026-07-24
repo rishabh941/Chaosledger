@@ -1,4 +1,3 @@
-// src/test/java/com/chaosledger/ledger/chaos/ChaosReplay.java
 package com.chaosledger.ledger.chaos;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -45,7 +44,7 @@ public class ChaosReplay {
 
     private ChaosReplay() {}
 
-    // ── Save / load ─────────────────────────────────────────────
+    // Save / load
 
     public static void save(List<ChaosEngine.ChaosEvent> events, Path file) {
         try {
@@ -66,7 +65,7 @@ public class ChaosReplay {
         }
     }
 
-    // ── Replay ──────────────────────────────────────────────────
+    // Replay
 
     /**
      * Replay a recorded event log against a live ChaosEngine, preserving

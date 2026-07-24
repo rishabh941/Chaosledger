@@ -24,4 +24,19 @@ public interface EventRepository extends JpaRepository<EventEntity, UUID> {
             "SELECT MAX(e.version) FROM EventEntity e WHERE e.aggregateId = :aggregateId"
     )
     Long findMaxVersionForAggregate(UUID aggregateId);
+
+    @org.springframework.data.jpa.repository.Query(
+            value = "SELECT COUNT(DISTINCT aggregate_id) FROM events WHERE event_type = 'AccountOpened'",
+            nativeQuery = true)
+    long countAccounts();
+
+    @org.springframework.data.jpa.repository.Query(
+            value = """
+                SELECT COALESCE(SUM(CASE \
+                  WHEN event_type IN ('MoneyDeposited', 'TransferReceived') THEN CAST(payload->>'amount' AS NUMERIC) \
+                  WHEN event_type IN ('MoneyWithdrawn', 'MoneyTransferred') THEN -CAST(payload->>'amount' AS NUMERIC) \
+                  ELSE 0 \
+                END), 0) FROM events""",
+            nativeQuery = true)
+    java.math.BigDecimal computeTotalBalance();
 }

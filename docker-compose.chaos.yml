@@ -18,6 +18,23 @@ services:
       timeout: 3s
       retries: 10
 
+  # ── Chaos Agent (docker pause/unpause via Docker socket) ───────
+  chaos-agent:
+    image: python:3.12-alpine
+    ports:
+      - "8475:8475"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./chaos-agent:/app
+    environment:
+      TOXIPROXY_HOST: toxiproxy
+      TOXIPROXY_PORT: "8474"
+    command: ["python", "/app/server.py"]
+    networks: [ledger-net]
+    depends_on:
+      toxiproxy:
+        condition: service_healthy
+
   # ── Initialize proxies after Toxiproxy is healthy ──────────────
   init-proxies:
     image: curlimages/curl:8.6.0

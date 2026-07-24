@@ -167,7 +167,6 @@ class EventStoreTest extends IntegrationTestBase {
         assertThat(eventStore.loadEvents(accountId)).hasSize(3);
     }
 
-    // === Helpers ===
 
     private AccountOpened newAccountOpened(UUID accountId) {
         return new AccountOpened(

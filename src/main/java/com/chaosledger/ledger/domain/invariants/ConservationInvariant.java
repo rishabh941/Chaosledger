@@ -55,7 +55,7 @@ public class ConservationInvariant implements Invariant {
         Instant start = Instant.now();
 
         try {
-            // ── Method 1: Sum of balances from reconstituted accounts ──
+            // Method 1: Sum of balances from reconstituted accounts
             BigDecimal balanceSum = BigDecimal.ZERO;
             int accountCount = 0;
 
@@ -68,7 +68,7 @@ public class ConservationInvariant implements Invariant {
                 accountCount++;
             }
 
-            // ── Method 2: Sum of deposits minus withdrawals from raw events ──
+            // Method 2: Sum of deposits minus withdrawals from raw events
             // Transfers are INTERNAL moves — they don't change the total.
             // Only deposits (money in) and withdrawals (money out) matter.
             BigDecimal totalDeposits = BigDecimal.ZERO;
@@ -88,7 +88,7 @@ public class ConservationInvariant implements Invariant {
 
             BigDecimal expectedTotal = totalDeposits.subtract(totalWithdrawals);
 
-            // ── Compare the two methods ──
+            // Compare the two methods
             if (balanceSum.compareTo(expectedTotal) != 0) {
                 return InvariantResult.failed(name(),
                         "Balance sum (" + balanceSum

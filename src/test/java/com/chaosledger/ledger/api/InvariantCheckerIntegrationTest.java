@@ -83,10 +83,10 @@ class InvariantCheckerIntegrationTest extends IntegrationTestBase {
         // Withdraw from account 1
         withdraw(account1Id, "500.00");
 
-        // ── Trigger invariant check ──
+        // Trigger invariant check
         checkerService.runAllChecks();
 
-        // ── Verify via REST endpoint ──
+        // Verify via REST endpoint
         MvcResult result = mockMvc.perform(get("/api/invariants"))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -147,7 +147,7 @@ class InvariantCheckerIntegrationTest extends IntegrationTestBase {
                 .isGreaterThan(0);
     }
 
-    // ─── Helper methods ─────────────────────────────────────────────
+    // Helper methods
 
     private String createAccount(String ownerName) throws Exception {
         String body = """

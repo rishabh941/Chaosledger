@@ -25,9 +25,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 class AccountTest {
 
-    // =====================================================================
     // Helper factories — build events without boilerplate
-    // =====================================================================
 
     private static final UUID ACCOUNT_ID = UUID.randomUUID();
     private static final UUID OWNER_ID = UUID.randomUUID();
@@ -66,9 +64,7 @@ class AccountTest {
                 UUID.randomUUID(), Instant.now());
     }
 
-    // =====================================================================
     // Reconstitution tests
-    // =====================================================================
 
     @Nested
     @DisplayName("Account.reconstitute()")
@@ -168,9 +164,7 @@ class AccountTest {
         }
     }
 
-    // =====================================================================
     // Validation tests
-    // =====================================================================
 
     @Nested
     @DisplayName("Validation rules")

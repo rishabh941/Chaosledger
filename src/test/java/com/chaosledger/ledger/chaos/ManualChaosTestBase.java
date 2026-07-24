@@ -1,4 +1,3 @@
-// src/test/java/com/chaosledger/ledger/chaos/ManualChaosTestBase.java
 package com.chaosledger.ledger.chaos;
 
 import com.chaosledger.ledger.multinode.ClusterClient;
@@ -84,7 +83,7 @@ public abstract class ManualChaosTestBase {
         client.waitForLeaderElection(Duration.ofSeconds(30));
     }
 
-    // ── Container control via docker compose CLI ────────────────
+    // Container control via docker compose CLI
 
     protected static void stopContainer(String serviceName) {
         runDockerCompose("stop", serviceName);
@@ -112,7 +111,6 @@ public abstract class ManualChaosTestBase {
         catch (InterruptedException e) { Thread.currentThread().interrupt(); }
     }
 
-    // ── Internal helpers ────────────────────────────────────────
 
     /**
      * Restart all 3 ledger containers. Safe to call even if they're

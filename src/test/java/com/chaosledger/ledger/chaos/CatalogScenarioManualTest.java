@@ -1,4 +1,3 @@
-// src/test/java/com/chaosledger/ledger/chaos/CatalogScenarioManualTest.java
 package com.chaosledger.ledger.chaos;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -15,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class CatalogScenarioManualTest extends ManualChaosTestBase {
 
-    // ── Resilient helpers ───────────────────────────────────────
+    // Resilient helpers
 
     /**
      * Like client.waitForBalance but tolerates connection errors
@@ -81,15 +80,13 @@ public class CatalogScenarioManualTest extends ManualChaosTestBase {
         }
     }
 
-    // ══════════════════════════════════════════════════════════════
     // Scenario 1.1 — Leader Crash Mid-Write
-    // ══════════════════════════════════════════════════════════════
 
     @Test
     @Order(1)
     @DisplayName("1.1 leader-crash-mid-write")
     void scenario_1_1_leaderCrashMidWrite() {
-        // ── Steady state ──
+        // Steady state
         UUID account1 = client.openAccount(UUID.randomUUID(), "INR");
         UUID account2 = client.openAccount(UUID.randomUUID(), "INR");
         client.deposit(account1, new BigDecimal("10000.00"), UUID.randomUUID());
@@ -110,19 +107,19 @@ public class CatalogScenarioManualTest extends ManualChaosTestBase {
                     new BigDecimal("5000.00"), Duration.ofSeconds(15));
         }
 
-        // ── Inject: partition + crash leader ──
+        // Inject: partition + crash leader
         chaosEngine.partitionNode(leaderNodeId);
         sleep(500);
         stopContainer(leaderService);
 
-        // ── Verify: new leader elected ──
+        // Verify: new leader elected
         int newLeaderIdx = waitForNewLeader(leaderIdx, 20_000);
         assertThat(newLeaderIdx)
                 .as("New leader should be elected after leader crash")
                 .isGreaterThanOrEqualTo(0);
         System.out.printf("[1.1] New leader: node %d%n", newLeaderIdx);
 
-        // ── Write on new leader ──
+        // Write on new leader
         client.findLeader();
         client.transfer(account1, account2, new BigDecimal("2000.00"), UUID.randomUUID());
 
@@ -141,12 +138,12 @@ public class CatalogScenarioManualTest extends ManualChaosTestBase {
                     .isEqualByComparingTo(totalBefore);
         }
 
-        // ── Heal: restart crashed leader ──
+        // Heal: restart crashed leader
         chaosEngine.healPartition(leaderNodeId);
         startContainer(leaderService);
         sleep(20000); // Windows containers take longer to restart
 
-        // ── Verify recovery ──
+        // Verify recovery
         waitForBalanceResilient(leaderIdx, account1,
                 new BigDecimal("8000.00"), Duration.ofSeconds(45));
         waitForBalanceResilient(leaderIdx, account2,
@@ -161,9 +158,7 @@ public class CatalogScenarioManualTest extends ManualChaosTestBase {
         System.out.println("[1.1] leader-crash-mid-write PASSED.");
     }
 
-    // ══════════════════════════════════════════════════════════════
     // Scenario 1.2 — Follower Crash During Replication
-    // ══════════════════════════════════════════════════════════════
 
     @Test
     @Order(2)
@@ -182,12 +177,12 @@ public class CatalogScenarioManualTest extends ManualChaosTestBase {
                     new BigDecimal("5000.00"), Duration.ofSeconds(15));
         }
 
-        // ── Inject: crash follower ──
+        // Inject: crash follower
         chaosEngine.partitionNode(nodeIdFromIdx(followerIdx));
         sleep(500);
         stopContainer(followerService);
 
-        // ── Verify: writes continue ──
+        // Verify: writes continue
         BigDecimal runningBalance = new BigDecimal("5000.00");
         for (int w = 0; w < 5; w++) {
             client.deposit(account, new BigDecimal("100.00"), UUID.randomUUID());
@@ -202,12 +197,12 @@ public class CatalogScenarioManualTest extends ManualChaosTestBase {
 
         System.out.printf("[1.2] 5 writes succeeded while follower %d was down.%n", followerIdx);
 
-        // ── Heal: restart follower ──
+        // Heal: restart follower
         chaosEngine.healPartition(nodeIdFromIdx(followerIdx));
         startContainer(followerService);
         sleep(12000);
 
-        // ── Verify recovery ──
+        // Verify recovery
         waitForBalanceResilient(followerIdx, account,
                 runningBalance, Duration.ofSeconds(30));
 
@@ -222,9 +217,7 @@ public class CatalogScenarioManualTest extends ManualChaosTestBase {
                 followerEvents);
     }
 
-    // ══════════════════════════════════════════════════════════════
     // Scenario 2.1 — Symmetric Partition During Write
-    // ══════════════════════════════════════════════════════════════
 
     @Test
     @Order(3)
@@ -248,10 +241,10 @@ public class CatalogScenarioManualTest extends ManualChaosTestBase {
                     new BigDecimal("10000.00"), Duration.ofSeconds(15));
         }
 
-        // ── Inject: TRUE symmetric partition ──
+        // Inject: TRUE symmetric partition
         partitionNodeSymmetric(leaderNodeId);
 
-        // ── Verify: new leader elected among survivors ──
+        // Verify: new leader elected among survivors
         int newLeaderIdx = waitForNewLeader(leaderIdx, 30_000);
         assertThat(newLeaderIdx)
                 .as("New leader should be elected from non-partitioned nodes")
@@ -265,11 +258,11 @@ public class CatalogScenarioManualTest extends ManualChaosTestBase {
         waitForBalanceResilient(survivor2, account2,
                 new BigDecimal("15000.00"), Duration.ofSeconds(10));
 
-        // ── Heal ──
+        // Heal
         chaosEngine.healPartition(leaderNodeId);
         sleep(5000);
 
-        // ── Verify convergence ──
+        // Verify convergence
         for (int i = 0; i < 3; i++) {
             waitForBalanceResilient(i, account1,
                     new BigDecimal("15000.00"), Duration.ofSeconds(20));
@@ -285,9 +278,7 @@ public class CatalogScenarioManualTest extends ManualChaosTestBase {
         System.out.println("[2.1] symmetric-partition-during-write PASSED.");
     }
 
-    // ══════════════════════════════════════════════════════════════
     // Scenario 2.4 — Flapping Network
-    // ══════════════════════════════════════════════════════════════
 
     @Test
     @Order(4)
@@ -321,11 +312,11 @@ public class CatalogScenarioManualTest extends ManualChaosTestBase {
 
         assertThat(successfulWrites).isGreaterThanOrEqualTo(1);
 
-        // ── Heal ──
+        // Heal
         chaosEngine.healFlapping(nodeIdFromIdx(flapIdx));
         sleep(5000);
 
-        // ── Verify convergence ──
+        // Verify convergence
         for (int i = 0; i < 3; i++) {
             waitForBalanceResilient(i, account,
                     expectedBalance, Duration.ofSeconds(20));
@@ -334,9 +325,7 @@ public class CatalogScenarioManualTest extends ManualChaosTestBase {
         System.out.printf("[2.4] flapping-network PASSED. %d/3 writes.%n", successfulWrites);
     }
 
-    // ══════════════════════════════════════════════════════════════
     // Scenario 7.3 — Idempotency Key Replay After Failure
-    // ══════════════════════════════════════════════════════════════
 
     @Test
     @Order(5)
@@ -388,7 +377,7 @@ public class CatalogScenarioManualTest extends ManualChaosTestBase {
                     .isEqualByComparingTo(new BigDecimal("13000.00"));
         }
 
-        // ── Heal ──
+        // Heal
         chaosEngine.healPartition(leaderNodeId);
         sleep(5000);
 

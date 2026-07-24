@@ -40,7 +40,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ConservationPropertyTest {
 
-    // ─── Test 1: Pure arithmetic conservation (Map-based) ───────────
+    // Test 1: Pure arithmetic conservation (Map-based)
     // This tests the INVARIANT in isolation, without the domain layer.
     // Fast, simple, and catches arithmetic bugs.
 
@@ -49,7 +49,7 @@ class ConservationPropertyTest {
     void totalBalance_isPreserved_afterAnyTransferSequence(
             @ForAll("initialDeposits") List<BigDecimal> deposits
     ) {
-        // ── Setup: create accounts with initial deposits ──
+        // Setup: create accounts with initial deposits
         List<UUID> accountIds = new ArrayList<>();
         Map<UUID, BigDecimal> balances = new LinkedHashMap<>();
 
@@ -63,7 +63,7 @@ class ConservationPropertyTest {
         BigDecimal expectedTotal = balances.values().stream()
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // ── Act: perform random transfers ──
+        // Act: perform random transfers
         Random rng = new Random();
         int transferCount = 20 + rng.nextInt(31); // 20 to 50 transfers
 
@@ -90,14 +90,14 @@ class ConservationPropertyTest {
             balances.merge(to, amount, BigDecimal::add);
         }
 
-        // ── Assert: total must be unchanged ──
+        // Assert: total must be unchanged
         BigDecimal actualTotal = balances.values().stream()
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         assertThat(actualTotal).isEqualByComparingTo(expectedTotal);
     }
 
-    // ─── Test 2: Domain-layer conservation (Account aggregates) ─────
+    // Test 2: Domain-layer conservation (Account aggregates)
     // This tests the same invariant through the REAL Account class,
     // catching bugs in Account.apply() and Account.reconstitute().
 
@@ -106,7 +106,7 @@ class ConservationPropertyTest {
     void totalBalance_isPreserved_throughAccountAggregates(
             @ForAll("initialDeposits") List<BigDecimal> deposits
     ) {
-        // ── Setup: create accounts with events ──
+        // Setup: create accounts with events
         int numAccounts = deposits.size();
         List<UUID> accountIds = new ArrayList<>();
         Map<UUID, List<Event>> eventStreams = new LinkedHashMap<>();
@@ -126,7 +126,7 @@ class ConservationPropertyTest {
         BigDecimal expectedTotal = deposits.stream()
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // ── Act: perform random transfers via events ──
+        // Act: perform random transfers via events
         Random rng = new Random();
         for (int i = 0; i < 30; i++) {
             UUID fromId = accountIds.get(rng.nextInt(numAccounts));
@@ -152,7 +152,7 @@ class ConservationPropertyTest {
                     LedgerArbitraries.transferReceivedEvent(toId, fromId, amount));
         }
 
-        // ── Assert: reconstitute all accounts, sum balances ──
+        // Assert: reconstitute all accounts, sum balances
         BigDecimal actualTotal = BigDecimal.ZERO;
         for (UUID accountId : accountIds) {
             Account account = Account.reconstitute(eventStreams.get(accountId));
@@ -162,7 +162,6 @@ class ConservationPropertyTest {
         assertThat(actualTotal).isEqualByComparingTo(expectedTotal);
     }
 
-    // ─── Generators ─────────────────────────────────────────────────
 
     @Provide
     Arbitrary<List<BigDecimal>> initialDeposits() {

@@ -1,4 +1,3 @@
-// src/test/java/com/chaosledger/ledger/chaos/CatalogScenarioTest.java
 package com.chaosledger.ledger.chaos;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -41,9 +40,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class CatalogScenarioTest extends ChaosTestBase {
 
-    // ══════════════════════════════════════════════════════════════
     // Scenario 1.1 — Leader Crash Mid-Write
-    // ══════════════════════════════════════════════════════════════
     //
     // Hypothesis: If the leader crashes while a write is in flight,
     //   the cluster elects a new leader and either the write is
@@ -57,13 +54,12 @@ public class CatalogScenarioTest extends ChaosTestBase {
     // Why this matters: In production, leaders crash from OOM kills,
     //   hardware failures, or deployment rolling restarts. The system
     //   must handle this without human intervention.
-    // ══════════════════════════════════════════════════════════════
 
     @Test
     @Order(1)
     @DisplayName("1.1 leader-crash-mid-write")
     void scenario_1_1_leaderCrashMidWrite() {
-        // ── Steady state ──
+        // Steady state
         UUID account1 = client.openAccount(UUID.randomUUID(), "INR");
         UUID account2 = client.openAccount(UUID.randomUUID(), "INR");
         client.deposit(account1, new BigDecimal("10000.00"), UUID.randomUUID());
@@ -84,14 +80,14 @@ public class CatalogScenarioTest extends ChaosTestBase {
 
         BigDecimal totalBefore = new BigDecimal("15000.00");
 
-        // ── Inject: partition leader's Raft, then stop it ──
+        // Inject: partition leader's Raft, then stop it
         // Partition first so the stop is cleaner for remaining nodes
         int leaderNodeId = nodeIdFromIdx(leaderIdx);
         chaosEngine.partitionNode(leaderNodeId);
         sleep(500);
         stopContainer(leaderService);
 
-        // ── Verify: new leader elected from survivors ──
+        // Verify: new leader elected from survivors
         int newLeaderIdx = -1;
         long electionStart = System.currentTimeMillis();
         while (System.currentTimeMillis() - electionStart < 15_000) {
@@ -120,7 +116,7 @@ public class CatalogScenarioTest extends ChaosTestBase {
         System.out.printf("[1.1] New leader elected: node %d (took %d ms)%n",
                 newLeaderIdx, electionMs);
 
-        // ── Write on new leader — this is the "mid-write" recovery ──
+        // Write on new leader — this is the "mid-write" recovery
         client.findLeader(); // refresh cached leader
         UUID transferKey = UUID.randomUUID();
         client.transfer(account1, account2, new BigDecimal("2000.00"), transferKey);
@@ -140,12 +136,12 @@ public class CatalogScenarioTest extends ChaosTestBase {
                     .isEqualByComparingTo(totalBefore);
         }
 
-        // ── Heal: restart crashed leader ──
+        // Heal: restart crashed leader
         chaosEngine.healPartition(leaderNodeId);
         startContainer(leaderService);
         sleep(8000); // crashed node needs time to reboot + rejoin Raft
 
-        // ── Verify recovery: crashed node catches up ──
+        // Verify recovery: crashed node catches up
         client.waitForBalance(leaderIdx, account1,
                 new BigDecimal("8000.00"), Duration.ofSeconds(20));
         client.waitForBalance(leaderIdx, account2,
@@ -170,9 +166,7 @@ public class CatalogScenarioTest extends ChaosTestBase {
                 "Event log: " + chaosEngine.getEventLog().size() + " entries.");
     }
 
-    // ══════════════════════════════════════════════════════════════
     // Scenario 1.2 — Follower Crash During Replication
-    // ══════════════════════════════════════════════════════════════
     //
     // Hypothesis: If a follower crashes while events are being
     //   replicated to it, the surviving quorum (leader + 1 follower)
@@ -183,13 +177,12 @@ public class CatalogScenarioTest extends ChaosTestBase {
     //
     // Why this matters: Followers crash from GC pauses, disk failures,
     //   or rolling deployments. The cluster must keep serving.
-    // ══════════════════════════════════════════════════════════════
 
     @Test
     @Order(2)
     @DisplayName("1.2 follower-crash-during-replication")
     void scenario_1_2_followerCrashDuringReplication() {
-        // ── Steady state ──
+        // Steady state
         UUID account = client.openAccount(UUID.randomUUID(), "INR");
         client.deposit(account, new BigDecimal("5000.00"), UUID.randomUUID());
 
@@ -206,12 +199,12 @@ public class CatalogScenarioTest extends ChaosTestBase {
         // Record event count before crash for comparison
         long eventCountBefore = client.getEventCount(leaderIdx);
 
-        // ── Inject: crash the follower ──
+        // Inject: crash the follower
         chaosEngine.partitionNode(nodeIdFromIdx(followerIdx));
         sleep(500);
         stopContainer(followerService);
 
-        // ── Verify: writes continue on quorum ──
+        // Verify: writes continue on quorum
         // Perform several writes while follower is down
         int writesWhileDown = 5;
         BigDecimal runningBalance = new BigDecimal("5000.00");
@@ -230,12 +223,12 @@ public class CatalogScenarioTest extends ChaosTestBase {
         System.out.printf("[1.2] %d writes succeeded while follower %d was down. " +
                 "Balance: %s%n", writesWhileDown, followerIdx, runningBalance);
 
-        // ── Heal: restart crashed follower ──
+        // Heal: restart crashed follower
         chaosEngine.healPartition(nodeIdFromIdx(followerIdx));
         startContainer(followerService);
         sleep(8000);
 
-        // ── Verify recovery: follower catches up with all missed writes ──
+        // Verify recovery: follower catches up with all missed writes
         client.waitForBalance(followerIdx, account,
                 runningBalance, Duration.ofSeconds(20));
 
@@ -264,9 +257,7 @@ public class CatalogScenarioTest extends ChaosTestBase {
                 "Follower caught up: %d events.%n", followerEvents);
     }
 
-    // ══════════════════════════════════════════════════════════════
     // Scenario 2.1 — Symmetric Partition During Write
-    // ══════════════════════════════════════════════════════════════
     //
     // Hypothesis: When the leader is symmetrically partitioned from
     //   the other two nodes, the leader loses its leadership (can't
@@ -280,13 +271,12 @@ public class CatalogScenarioTest extends ChaosTestBase {
     // Why this matters: Symmetric partitions are the classic
     //   distributed systems failure. Cloud network switches fail,
     //   VPC routing breaks, availability zones lose connectivity.
-    // ══════════════════════════════════════════════════════════════
 
     @Test
     @Order(3)
     @DisplayName("2.1 symmetric-partition-during-write")
     void scenario_2_1_symmetricPartitionDuringWrite() {
-        // ── Steady state ──
+        // Steady state
         UUID account1 = client.openAccount(UUID.randomUUID(), "INR");
         UUID account2 = client.openAccount(UUID.randomUUID(), "INR");
         client.deposit(account1, new BigDecimal("20000.00"), UUID.randomUUID());
@@ -306,10 +296,10 @@ public class CatalogScenarioTest extends ChaosTestBase {
                     new BigDecimal("10000.00"), Duration.ofSeconds(10));
         }
 
-        // ── Inject: partition the leader ──
+        // Inject: partition the leader
         chaosEngine.partitionNode(leaderNodeId);
 
-        // ── Verify: new leader elected among survivors ──
+        // Verify: new leader elected among survivors
         int newLeaderIdx = -1;
         long start = System.currentTimeMillis();
         while (System.currentTimeMillis() - start < 15_000) {
@@ -338,7 +328,7 @@ public class CatalogScenarioTest extends ChaosTestBase {
         System.out.printf("[2.1] New leader: node %d (partition took %d ms to resolve)%n",
                 newLeaderIdx, System.currentTimeMillis() - start);
 
-        // ── Perform writes during partition ──
+        // Perform writes during partition
         client.findLeader(); // refresh
         client.transfer(account1, account2, new BigDecimal("5000.00"), UUID.randomUUID());
 
@@ -357,11 +347,11 @@ public class CatalogScenarioTest extends ChaosTestBase {
                     .isEqualByComparingTo(totalMoney);
         }
 
-        // ── Heal the partition ──
+        // Heal the partition
         chaosEngine.healPartition(leaderNodeId);
         sleep(5000);
 
-        // ── Verify convergence: all 3 nodes agree ──
+        // Verify convergence: all 3 nodes agree
         for (int i = 0; i < 3; i++) {
             client.waitForBalance(i, account1,
                     new BigDecimal("15000.00"), Duration.ofSeconds(15));
@@ -389,9 +379,7 @@ public class CatalogScenarioTest extends ChaosTestBase {
         System.out.println("[2.1] symmetric-partition-during-write PASSED.");
     }
 
-    // ══════════════════════════════════════════════════════════════
     // Scenario 2.4 — Flapping Network
-    // ══════════════════════════════════════════════════════════════
     //
     // Hypothesis: When a node's network is flapping (data arrives in
     //   tiny fragments with delays), the cluster may be slow but still
@@ -407,13 +395,12 @@ public class CatalogScenarioTest extends ChaosTestBase {
     //   environments with overloaded switches, congested links,
     //   or misconfigured MTU settings. They're harder to detect than
     //   clean partitions because the connection is technically "up."
-    // ══════════════════════════════════════════════════════════════
 
     @Test
     @Order(4)
     @DisplayName("2.4 flapping-network")
     void scenario_2_4_flappingNetwork() {
-        // ── Steady state ──
+        // Steady state
         UUID account = client.openAccount(UUID.randomUUID(), "INR");
         client.deposit(account, new BigDecimal("8000.00"), UUID.randomUUID());
 
@@ -424,14 +411,14 @@ public class CatalogScenarioTest extends ChaosTestBase {
                     new BigDecimal("8000.00"), Duration.ofSeconds(10));
         }
 
-        // ── Inject: flap one node's network ──
+        // Inject: flap one node's network
         // Choose a follower so the cluster keeps a stable leader
         int flapIdx = (leaderIdx + 1) % 3;
         int flapNodeId = nodeIdFromIdx(flapIdx);
         chaosEngine.flappingNetwork(flapNodeId);
         sleep(2000); // Let the slicer take effect
 
-        // ── Verify: writes still succeed ──
+        // Verify: writes still succeed
         BigDecimal expectedBalance = new BigDecimal("8000.00");
         int successfulWrites = 0;
         for (int w = 0; w < 3; w++) {
@@ -459,11 +446,11 @@ public class CatalogScenarioTest extends ChaosTestBase {
         client.waitForBalance(stableNode, account,
                 expectedBalance, Duration.ofSeconds(15));
 
-        // ── Heal ──
+        // Heal
         chaosEngine.healFlapping(flapNodeId);
         sleep(5000);
 
-        // ── Verify convergence ──
+        // Verify convergence
         for (int i = 0; i < 3; i++) {
             client.waitForBalance(i, account,
                     expectedBalance, Duration.ofSeconds(20));
@@ -480,9 +467,7 @@ public class CatalogScenarioTest extends ChaosTestBase {
         System.out.println("[2.4] flapping-network PASSED.");
     }
 
-    // ══════════════════════════════════════════════════════════════
     // Scenario 7.3 — Idempotency Key Replay After Failure
-    // ══════════════════════════════════════════════════════════════
     //
     // Hypothesis: If a client sends a write, the leader crashes (or
     //   becomes partitioned) before the client gets a response, and
@@ -496,13 +481,12 @@ public class CatalogScenarioTest extends ChaosTestBase {
     //   production, load balancers retry, clients retry, and message
     //   queues redeliver. Without idempotency, you get double-charged
     //   customers — the cardinal sin in fintech.
-    // ══════════════════════════════════════════════════════════════
 
     @Test
     @Order(5)
     @DisplayName("7.3 idempotency-key-replay-after-failure")
     void scenario_7_3_idempotencyKeyReplayAfterFailure() {
-        // ── Steady state ──
+        // Steady state
         UUID account = client.openAccount(UUID.randomUUID(), "INR");
         client.deposit(account, new BigDecimal("10000.00"), UUID.randomUUID());
 
@@ -516,7 +500,7 @@ public class CatalogScenarioTest extends ChaosTestBase {
                     new BigDecimal("10000.00"), Duration.ofSeconds(10));
         }
 
-        // ── Step 1: Send deposit with known idempotency key ──
+        // Step 1: Send deposit with known idempotency key
         UUID idempotencyKey = UUID.randomUUID();
         client.deposit(account, new BigDecimal("3000.00"), idempotencyKey);
 
@@ -530,7 +514,7 @@ public class CatalogScenarioTest extends ChaosTestBase {
                     new BigDecimal("13000.00"), Duration.ofSeconds(10));
         }
 
-        // ── Step 2: Partition the leader (simulating "client didn't get response") ──
+        // Step 2: Partition the leader (simulating "client didn't get response")
         chaosEngine.partitionNode(leaderNodeId);
 
         // Wait for new leader
@@ -558,7 +542,7 @@ public class CatalogScenarioTest extends ChaosTestBase {
 
         client.findLeader(); // refresh
 
-        // ── Step 3: Retry with SAME idempotency key on new leader ──
+        // Step 3: Retry with SAME idempotency key on new leader
         // This should either be rejected as duplicate or be a no-op
         boolean retryRejected = false;
         try {
@@ -571,7 +555,7 @@ public class CatalogScenarioTest extends ChaosTestBase {
             System.out.printf("[7.3] Retry correctly rejected: %s%n", e.getMessage());
         }
 
-        // ── Verify: balance is STILL 13000, not 16000 ──
+        // Verify: balance is STILL 13000, not 16000
         // The duplicate write must NOT have been applied twice
         for (int idx : new int[]{survivor1, survivor2}) {
             BigDecimal balance = client.getBalance(idx, account);
@@ -580,11 +564,11 @@ public class CatalogScenarioTest extends ChaosTestBase {
                     .isEqualByComparingTo(new BigDecimal("13000.00"));
         }
 
-        // ── Heal ──
+        // Heal
         chaosEngine.healPartition(leaderNodeId);
         sleep(5000);
 
-        // ── Verify full convergence ──
+        // Verify full convergence
         for (int i = 0; i < 3; i++) {
             client.waitForBalance(i, account,
                     new BigDecimal("13000.00"), Duration.ofSeconds(15));

@@ -1,4 +1,3 @@
-// src/test/java/com/chaosledger/ledger/chaos/BasicChaosTest.java
 package com.chaosledger.ledger.chaos;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -32,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @EnabledIfEnvironmentVariable(named = "RUN_MULTINODE_TESTS", matches = "true")
 public class BasicChaosTest extends ChaosTestBase {
 
-    // ── Test 1: Partition a follower ────────────────────────────
+    // Test 1: Partition a follower
 
     @Test
     @Order(1)
@@ -85,7 +84,7 @@ public class BasicChaosTest extends ChaosTestBase {
                 "Event log: " + chaosEngine.getEventLog());
     }
 
-    // ── Test 2: Partition the leader ────────────────────────────
+    // Test 2: Partition the leader
 
     @Test
     @Order(2)
@@ -178,7 +177,7 @@ public class BasicChaosTest extends ChaosTestBase {
         System.out.println("[BasicChaosTest] partitionLeader PASSED.");
     }
 
-    // ── Test 3: Slow network ────────────────────────────────────
+    // Test 3: Slow network
 
     @Test
     @Order(3)
@@ -240,7 +239,7 @@ public class BasicChaosTest extends ChaosTestBase {
         System.out.println("[BasicChaosTest] slowNetwork PASSED.");
     }
 
-    // ── Test 4: Partition, write, heal, verify convergence ──────
+    // Test 4: Partition, write, heal, verify convergence
 
     @Test
     @Order(4)
@@ -311,7 +310,7 @@ public class BasicChaosTest extends ChaosTestBase {
         System.out.println("[BasicChaosTest] partitionAndWrite convergence PASSED.");
     }
 
-    // ── Test 5: Toxiproxy healAll actually resets ────────────────
+    // Test 5: Toxiproxy healAll actually resets
 
     @Test
     @Order(5)
@@ -346,7 +345,7 @@ public class BasicChaosTest extends ChaosTestBase {
         System.out.println("[BasicChaosTest] healAll PASSED.");
     }
 
-    // ── Test 6: Event log records chaos actions ─────────────────
+    // Test 6: Event log records chaos actions
 
     @Test
     @Order(6)

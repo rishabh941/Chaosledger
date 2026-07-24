@@ -17,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class HlcPropertyTest {
 
-    // ── Property 1: tick() is always strictly monotonic ──
+    // Property 1: tick() is always strictly monotonic
 
     @Property(tries = 1000)
     void tickIsStrictlyMonotonic(
@@ -43,7 +43,7 @@ class HlcPropertyTest {
         }
     }
 
-    // ── Property 2: update() preserves causality ──
+    // Property 2: update() preserves causality
 
     @Property(tries = 1000)
     void updatePreservesCausality(
@@ -66,7 +66,7 @@ class HlcPropertyTest {
                 .isTrue();
     }
 
-    // ── Property 3: tick() never goes backward, even with backward wall clock ──
+    // Property 3: tick() never goes backward, even with backward wall clock
 
     @Property(tries = 1000)
     void tickNeverGoesBackwardEvenWithClockDrift(
@@ -90,7 +90,7 @@ class HlcPropertyTest {
         }
     }
 
-    // ── Property 4: update then tick maintains ordering ──
+    // Property 4: update then tick maintains ordering
 
     @Property(tries = 1000)
     void updateThenTickMaintainsOrdering(
@@ -116,7 +116,7 @@ class HlcPropertyTest {
         }
     }
 
-    // ── Property 5: two-node causal chain is totally ordered ──
+    // Property 5: two-node causal chain is totally ordered
 
     @Property(tries = 500)
     void twoNodeCausalChainIsTotallyOrdered(

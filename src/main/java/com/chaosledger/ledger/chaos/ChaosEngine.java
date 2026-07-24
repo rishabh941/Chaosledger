@@ -1,4 +1,3 @@
-// src/main/java/com/chaosledger/ledger/chaos/ChaosEngine.java
 package com.chaosledger.ledger.chaos;
 
 import lombok.extern.slf4j.Slf4j;
@@ -60,7 +59,7 @@ public class ChaosEngine {
         this.toxiproxy = toxiproxy;
     }
 
-    // ── Proxy setup (called once at cluster boot) ───────────────
+    // Proxy setup (called once at cluster boot)
 
     /**
      * Create all 6 proxies (3 Raft + 3 HTTP). Call this AFTER
@@ -83,7 +82,7 @@ public class ChaosEngine {
         log.info("ChaosEngine: all 6 proxies created");
     }
 
-    // ── Partition operations ────────────────────────────────────
+    // Partition operations
 
     /**
      * Partition a node — disable its Raft proxy so no peer can reach it.
@@ -101,6 +100,33 @@ public class ChaosEngine {
         toxiproxy.setProxyEnabled(proxyName, false);
         recordEvent("PARTITION", "Node " + nodeId + " Raft traffic blocked");
         log.info("CHAOS: Node {} partitioned (Raft proxy '{}' disabled)", nodeId, proxyName);
+    }
+
+    /**
+     * Partition a node by disabling ALL proxies briefly, then re-enabling
+     * the non-partitioned ones. This breaks existing gRPC connections
+     * and forces a leader election if the partitioned node was the leader.
+     *
+     * Why: disabling only the target's proxy blocks inbound traffic but
+     * the node can still send heartbeats through other nodes' proxies.
+     * Followers keep receiving heartbeats and never trigger an election.
+     */
+    public void partitionNodeHard(int nodeId) {
+        for (int i = 1; i <= 3; i++) {
+            toxiproxy.setProxyEnabled(raftProxy(i), false);
+        }
+        recordEvent("PARTITION_HARD", "Node " + nodeId + " hard partitioned — all proxies briefly disabled");
+        log.info("CHAOS: All Raft proxies disabled to break connections for node {} partition", nodeId);
+
+        try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
+
+        for (int i = 1; i <= 3; i++) {
+            if (i != nodeId) {
+                toxiproxy.setProxyEnabled(raftProxy(i), true);
+            }
+        }
+        recordEvent("PARTITION_HARD", "Non-partitioned proxies re-enabled, node " + nodeId + " remains isolated");
+        log.info("CHAOS: Node {} isolated — other proxies re-enabled, election should follow", nodeId);
     }
 
     /**
@@ -125,7 +151,7 @@ public class ChaosEngine {
         log.info("CHAOS: Node {} partition healed", nodeId);
     }
 
-    // ── Latency operations ──────────────────────────────────────
+    // Latency operations
 
     /**
      * Inject latency on a node's Raft traffic in BOTH directions.
@@ -150,7 +176,7 @@ public class ChaosEngine {
         slowNetwork(nodeId, latencyMs, 0);
     }
 
-    // ── Asymmetric partition (Week 13) ──────────────────────────
+    // Asymmetric partition (Week 13)
 
     public enum AsymmetricDirection { CANNOT_SEND, CANNOT_RECEIVE }
 
@@ -190,7 +216,7 @@ public class ChaosEngine {
         log.info("CHAOS: Node {} latency healed", nodeId);
     }
 
-    // ── Bandwidth operations ────────────────────────────────────
+    // Bandwidth operations
 
     /**
      * Throttle a node's Raft bandwidth.
@@ -216,7 +242,7 @@ public class ChaosEngine {
         recordEvent("HEAL_THROTTLE", "Node " + nodeId + " bandwidth restored");
     }
 
-    // ── Timeout (connection drop) operations ────────────────────
+    // Timeout (connection drop) operations
 
     /**
      * Force connection drops on a node's Raft traffic.
@@ -241,7 +267,7 @@ public class ChaosEngine {
         recordEvent("HEAL_DROP", "Node " + nodeId + " connection drops removed");
     }
 
-    // ── Flapping network ────────────────────────────────────────
+    // Flapping network
 
     /**
      * Simulate a flapping network by slicing data into tiny fragments
@@ -266,7 +292,7 @@ public class ChaosEngine {
         recordEvent("HEAL_FLAPPING", "Node " + nodeId + " flapping healed");
     }
 
-    // ── Global operations ───────────────────────────────────────
+    // Global operations
 
     /**
      * Heal EVERYTHING. Removes all toxics from all proxies and
@@ -286,7 +312,7 @@ public class ChaosEngine {
         return toxiproxy.isHealthy();
     }
 
-    // ── Event log ───────────────────────────────────────────────
+    // Event log
 
     /**
      * Get the full chaos event log. Each entry records the timestamp,
@@ -312,7 +338,6 @@ public class ChaosEngine {
             String description
     ) {}
 
-    // ── Internal helpers ────────────────────────────────────────
 
     private String raftProxy(int nodeId) {
         String name = RAFT_PROXY_NAMES.get(nodeId);

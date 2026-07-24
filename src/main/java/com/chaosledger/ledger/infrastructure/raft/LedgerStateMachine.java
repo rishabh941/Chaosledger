@@ -116,7 +116,7 @@ public class LedgerStateMachine extends BaseStateMachine {
                         events);
             }
 
-            // ── Week 12 fix: replicate idempotency keys ────────
+            // Week 12 fix: replicate idempotency keys
             // Record idempotency keys from committed events so ALL
             // nodes (not just the leader) have them. This prevents
             // duplicate writes after leader failover.

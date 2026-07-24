@@ -7,9 +7,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ratis.client.RaftClient;
 import com.chaosledger.ledger.domain.IdempotencyStore;
+import org.apache.ratis.RaftConfigKeys;
 import org.apache.ratis.conf.RaftProperties;
 import org.apache.ratis.grpc.GrpcConfigKeys;
 import org.apache.ratis.protocol.*;
+import org.apache.ratis.rpc.SupportedRpcType;
 import org.apache.ratis.server.RaftServer;
 import org.apache.ratis.server.RaftServerConfigKeys;
 import org.apache.ratis.util.TimeDuration;
@@ -152,6 +154,7 @@ public class RaftConfiguration {
     @Bean(destroyMethod = "close")
     public RaftClient raftClient(RaftGroup group) throws IOException {
         RaftProperties properties = new RaftProperties();
+        RaftConfigKeys.Rpc.setType(properties, SupportedRpcType.GRPC);
 
         RaftClient client = RaftClient.newBuilder()
                 .setRaftGroup(group)

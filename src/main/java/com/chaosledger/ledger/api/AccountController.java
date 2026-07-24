@@ -9,16 +9,17 @@ import com.chaosledger.ledger.domain.commands.OpenAccountCommand;
 import com.chaosledger.ledger.domain.commands.WithdrawCommand;
 import com.chaosledger.ledger.domain.events.Event;
 import com.chaosledger.ledger.domain.events.EventStore;
+import com.chaosledger.ledger.infrastructure.eventstore.EventRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.time.Instant;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/accounts")
@@ -27,6 +28,10 @@ public class AccountController {
 
     private final AccountCommandHandler commandHandler;
     private final EventStore eventStore;
+    private final EventRepository eventRepository;
+
+    @Value("${raft.node.id:node-1}")
+    private String nodeId;
 
     @PostMapping
     public ResponseEntity<Map<String, UUID>> openAccount(@Valid @RequestBody OpenAccountRequest request) {
@@ -70,5 +75,16 @@ public class AccountController {
         commandHandler.handle(
                 new WithdrawCommand(accountId, request.amount(), request.idempotencyKey()));
         return Map.of("status", "withdrawn");
+    }
+
+    @GetMapping("/summary")
+    public Map<String, Object> getAccountSummary() {
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("nodeId", nodeId);
+        summary.put("totalAccounts", eventRepository.countAccounts());
+        summary.put("totalBalance", eventRepository.computeTotalBalance());
+        summary.put("totalEvents", eventRepository.count());
+        summary.put("timestamp", Instant.now().toString());
+        return summary;
     }
 }

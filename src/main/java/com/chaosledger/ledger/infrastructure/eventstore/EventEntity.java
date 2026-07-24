@@ -41,7 +41,7 @@ public class EventEntity {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    // ===== HLC Timestamp Fields (Week 9) =====
+    // HLC Timestamp Fields (Week 9)
 
     @Column(name = "hlc_physical_time")
     private Long hlcPhysicalTime;

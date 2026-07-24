@@ -56,7 +56,7 @@ class IdempotencyPropertyTest {
     void sameCommand_executedOnce_producesExactlyOneBalanceChange(
             @ForAll("withdrawalAmounts") BigDecimal withdrawalAmount
     ) {
-        // ── Setup: create account with sufficient funds ──
+        // Setup: create account with sufficient funds
         UUID accountId = UUID.randomUUID();
         UUID ownerId = UUID.randomUUID();
         BigDecimal initialDeposit = new BigDecimal("50000.00");
@@ -71,7 +71,7 @@ class IdempotencyPropertyTest {
         // Verify starting balance
         assertThat(balanceBefore).isEqualByComparingTo(initialDeposit);
 
-        // ── Act: apply the withdrawal event ONCE ──
+        // Act: apply the withdrawal event ONCE
         UUID idempotencyKey = UUID.randomUUID(); // same key for both "attempts"
         MoneyWithdrawn withdrawal = new MoneyWithdrawn(
                 UUID.randomUUID(),
@@ -86,7 +86,7 @@ class IdempotencyPropertyTest {
         Account afterFirstWithdrawal = Account.reconstitute(new ArrayList<>(events));
         BigDecimal balanceAfterFirst = afterFirstWithdrawal.getBalance().amount();
 
-        // ── Simulate "second attempt" — DO NOT add the event again ──
+        // Simulate "second attempt" — DO NOT add the event again
         // In the real system, AccountCommandHandler.checkIdempotency()
         // would throw DuplicateCommandException here.
         // At the event level, idempotency means the event list doesn't
@@ -95,7 +95,7 @@ class IdempotencyPropertyTest {
         Account afterSecondAttempt = Account.reconstitute(new ArrayList<>(events));
         BigDecimal balanceAfterSecond = afterSecondAttempt.getBalance().amount();
 
-        // ── Assert ──
+        // Assert
 
         // 1. First withdrawal decreased balance by exactly the amount
         assertThat(balanceBefore.subtract(balanceAfterFirst))
@@ -114,7 +114,7 @@ class IdempotencyPropertyTest {
                 .isEqualTo(afterSecondAttempt.getVersion());
     }
 
-    // ─── Test 2: Idempotency for deposits ───────────────────────────
+    // Test 2: Idempotency for deposits
 
     @Property(tries = 500)
     @Report(Reporting.GENERATED)
@@ -155,7 +155,6 @@ class IdempotencyPropertyTest {
                 .isEqualTo(afterSecond.getVersion());
     }
 
-    // ─── Generators ─────────────────────────────────────────────────
 
     @Provide
     Arbitrary<BigDecimal> withdrawalAmounts() {

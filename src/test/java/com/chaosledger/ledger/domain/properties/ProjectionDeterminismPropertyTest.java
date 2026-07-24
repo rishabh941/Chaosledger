@@ -54,7 +54,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ProjectionDeterminismPropertyTest {
 
-    // ─── Main property: replay consistency ──────────────────────────
+    // Main property: replay consistency
 
     @Property(tries = 1000)
     @Report(Reporting.GENERATED)
@@ -91,7 +91,7 @@ class ProjectionDeterminismPropertyTest {
                 .isEqualTo(second.getOwnerId());
     }
 
-    // ─── Extended: replay 10 times ──────────────────────────────────
+    // Extended: replay 10 times
     // Extra paranoia — replay the same events 10 times and verify
     // all 10 results are identical. Catches subtle non-determinism
     // that might not show up in just 2 replays (e.g., GC-dependent
@@ -112,7 +112,7 @@ class ProjectionDeterminismPropertyTest {
         }
     }
 
-    // ─── Extended: complex event sequences ──────────────────────────
+    // Extended: complex event sequences
     // Mix deposits, withdrawals, transfers, and transfer-received events.
     // This tests determinism across ALL event types, not just deposits.
 
@@ -129,7 +129,6 @@ class ProjectionDeterminismPropertyTest {
                 .isEqualTo(second.getVersion());
     }
 
-    // ─── Generators ─────────────────────────────────────────────────
 
     @Provide
     Arbitrary<List<Event>> eventSequences() {

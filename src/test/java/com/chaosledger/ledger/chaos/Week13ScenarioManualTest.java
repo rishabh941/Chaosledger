@@ -31,7 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class Week13ScenarioManualTest extends ManualChaosTestBase {
 
-    // ── Resilient helpers (same pattern as CatalogScenarioManualTest) ──
+    // Resilient helpers (same pattern as CatalogScenarioManualTest)
 
     private void waitForBalanceResilient(int nodeIdx, UUID accountId,
                                          BigDecimal expected, Duration timeout) {
@@ -76,7 +76,7 @@ public class Week13ScenarioManualTest extends ManualChaosTestBase {
         return -1;
     }
 
-    // ── Reset clock offsets before each test (Week 13 addition) ──
+    // Reset clock offsets before each test (Week 13 addition)
 
     @BeforeEach
     void resetClockOffsets() {
@@ -86,9 +86,7 @@ public class Week13ScenarioManualTest extends ManualChaosTestBase {
         }
     }
 
-    // ══════════════════════════════════════════════════════════════
     // Scenario 2.2 — Asymmetric Partition
-    // ══════════════════════════════════════════════════════════════
 
     @Test
     @Order(1)
@@ -108,12 +106,12 @@ public class Week13ScenarioManualTest extends ManualChaosTestBase {
         int stableIdx = (leaderIdx + 2) % 3;
         int targetNodeId = nodeIdFromIdx(targetIdx);
 
-        // ── Inject: target can SEND but cannot RECEIVE ──
+        // Inject: target can SEND but cannot RECEIVE
         chaosEngine.partitionAsymmetric(targetNodeId,
                 ChaosEngine.AsymmetricDirection.CANNOT_RECEIVE);
         sleep(3000);
 
-        // ── Verify: exactly one leader, writes still work ──
+        // Verify: exactly one leader, writes still work
         int leaderDuringFault = client.findLeader();
         client.deposit(account, new BigDecimal("500.00"), UUID.randomUUID());
 
@@ -133,11 +131,11 @@ public class Week13ScenarioManualTest extends ManualChaosTestBase {
                 .as("Exactly one leader during asymmetric partition")
                 .isEqualTo(1);
 
-        // ── Heal ──
+        // Heal
         chaosEngine.healAsymmetricPartition(targetNodeId);
         sleep(5000);
 
-        // ── Verify recovery ──
+        // Verify recovery
         for (int i = 0; i < 3; i++) {
             waitForBalanceResilient(i, account,
                     new BigDecimal("12500.00"), Duration.ofSeconds(20));
@@ -146,9 +144,7 @@ public class Week13ScenarioManualTest extends ManualChaosTestBase {
         System.out.println("[2.2] asymmetric-partition PASSED.");
     }
 
-    // ══════════════════════════════════════════════════════════════
     // Scenario 2.7 — Split-Brain With Write Acceptance
-    // ══════════════════════════════════════════════════════════════
 
     @Test
     @Order(2)
@@ -167,7 +163,7 @@ public class Week13ScenarioManualTest extends ManualChaosTestBase {
                     new BigDecimal("20000.00"), Duration.ofSeconds(15));
         }
 
-        // ── Inject: TRUE symmetric partition of leader ──
+        // Inject: TRUE symmetric partition of leader
         partitionNodeSymmetric(leaderNodeId);
 
         // Sample roles for 8 seconds — never more than 1 leader
@@ -221,7 +217,7 @@ public class Week13ScenarioManualTest extends ManualChaosTestBase {
             }
         }
 
-        // ── Heal ──
+        // Heal
         chaosEngine.healPartition(leaderNodeId);
         sleep(8000);
 
@@ -249,9 +245,7 @@ public class Week13ScenarioManualTest extends ManualChaosTestBase {
                 rogueWriteAccepted, finalBalance);
     }
 
-    // ══════════════════════════════════════════════════════════════
     // Scenario 3.1 — Clock Drift Forward 2s
-    // ══════════════════════════════════════════════════════════════
 
     @Test
     @Order(3)
@@ -296,7 +290,7 @@ public class Week13ScenarioManualTest extends ManualChaosTestBase {
                         new BigDecimal("9100.00"), Duration.ofSeconds(15));
             }
 
-            // ── Heal: remove skew ──
+            // Heal: remove skew
             client.setClockOffset(driftIdx, 0);
             sleep(1000);
 
@@ -314,9 +308,7 @@ public class Week13ScenarioManualTest extends ManualChaosTestBase {
         System.out.println("[3.1] clock-drift-forward-2s PASSED.");
     }
 
-    // ══════════════════════════════════════════════════════════════
     // Scenario 5.3 — Poison Pill Message
-    // ══════════════════════════════════════════════════════════════
 
     @Test
     @Order(4)
@@ -341,7 +333,7 @@ public class Week13ScenarioManualTest extends ManualChaosTestBase {
             catch (Exception ignored) {}
         }
 
-        // ── Inject: 3 poison pills ──
+        // Inject: 3 poison pills
         client.publishRawToKafka(leaderIdx, "THIS IS NOT JSON AT ALL {{{");
         client.publishRawToKafka(leaderIdx, "{\"foo\": \"bar\", \"baz\": 42}");
         client.publishRawToKafka(leaderIdx,
@@ -349,7 +341,7 @@ public class Week13ScenarioManualTest extends ManualChaosTestBase {
 
         sleep(5000);
 
-        // ── Verify: consumer survived, pills routed to DLT ──
+        // Verify: consumer survived, pills routed to DLT
         // Kafka consumer group distributes messages across all 3 nodes,
         // so we sum stats from ALL nodes, not just the leader.
         long totalInvalid = 0;
@@ -391,9 +383,7 @@ public class Week13ScenarioManualTest extends ManualChaosTestBase {
         System.out.println("[5.3] poison-pill-message PASSED.");
     }
 
-    // ══════════════════════════════════════════════════════════════
     // Scenario 7.1 — Concurrent Transfer, Same Account
-    // ══════════════════════════════════════════════════════════════
 
     @Test
     @Order(5)
@@ -410,7 +400,7 @@ public class Week13ScenarioManualTest extends ManualChaosTestBase {
                     new BigDecimal("1000.00"), Duration.ofSeconds(15));
         }
 
-        // ── Two concurrent 700-transfers from a 1000-balance account ──
+        // Two concurrent 700-transfers from a 1000-balance account
         ExecutorService pool = Executors.newFixedThreadPool(2);
         CountDownLatch startGate = new CountDownLatch(1);
 
@@ -456,7 +446,7 @@ public class Week13ScenarioManualTest extends ManualChaosTestBase {
                 .as("Source balance should be 300 (only one debit applied)")
                 .isEqualByComparingTo(new BigDecimal("300.00"));
 
-        // ── KNOWN BUG: cross-aggregate atomicity gap ──────────────
+        // KNOWN BUG: cross-aggregate atomicity gap
         // Transfer produces separate Raft commands for source (debit)
         // and destination (credit). OCC rejects the second debit on
         // the source aggregate, but both credits apply to their

@@ -1,4 +1,3 @@
-// src/main/java/com/chaosledger/ledger/chaos/ToxiproxyClient.java
 package com.chaosledger.ledger.chaos;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -40,7 +39,7 @@ public class ToxiproxyClient {
         this.mapper = new ObjectMapper();
     }
 
-    // ── Proxy management ────────────────────────────────────────
+    // Proxy management
 
     /**
      * Create a new proxy. Toxiproxy listens on listenAddress and
@@ -138,7 +137,7 @@ public class ToxiproxyClient {
         return fromJson(resp.body(), new TypeReference<>() {});
     }
 
-    // ── Toxic management ────────────────────────────────────────
+    // Toxic management
 
     /**
      * Add a latency toxic to a proxy. Direction is "upstream" (toward
@@ -279,7 +278,7 @@ public class ToxiproxyClient {
         return fromJson(resp.body(), new TypeReference<>() {});
     }
 
-    // ── Reset ───────────────────────────────────────────────────
+    // Reset
 
     /**
      * Reset Toxiproxy — removes all toxics from all proxies and
@@ -320,7 +319,6 @@ public class ToxiproxyClient {
         }
     }
 
-    // ── Internal helpers ────────────────────────────────────────
 
     private void doAddToxic(String proxyName, Map<String, Object> body) {
         String json = toJson(body);

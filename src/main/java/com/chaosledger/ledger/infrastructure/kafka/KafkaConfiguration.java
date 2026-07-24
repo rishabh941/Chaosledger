@@ -1,4 +1,3 @@
-// src/main/java/com/chaosledger/ledger/infrastructure/kafka/KafkaConfiguration.java
 package com.chaosledger.ledger.infrastructure.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;

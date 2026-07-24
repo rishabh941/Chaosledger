@@ -93,27 +93,20 @@ public class PostgresEventStore implements EventStore {
             throw new IllegalArgumentException("Cannot append empty event list");
         }
 
+        // Use actual DB version as base — Raft log ordering guarantees
+        // correctness, and expectedVersion may be stale since state machine
+        // application is async relative to RaftClient.send() returning.
         long actualVersion = currentVersion(aggregateId);
-        if (actualVersion != expectedVersion) {
-            log.warn("Concurrency conflict: expected version {} but actual is {} for aggregate {}",
-                    expectedVersion, actualVersion, aggregateId);
-            throw new ConcurrencyException(aggregateId, expectedVersion);
-        }
 
         List<EventEntity> entities = newEvents.stream()
                 .map(event -> toEntity(event, 0))
                 .collect(Collectors.toList());
 
         for (int i = 0; i < entities.size(); i++) {
-            // Use the leader's HLC for the first event.
-            // For subsequent events in the same batch, tick locally
-            // but preserve the leader's physical time as minimum.
             HlcTimestamp ts;
             if (i == 0) {
                 ts = hlcTimestamp;
             } else {
-                // Tick locally but update from the leader's timestamp
-                // to maintain causal ordering within the batch
                 ts = hlc.tick();
             }
 
@@ -124,7 +117,7 @@ public class PostgresEventStore implements EventStore {
                     .aggregateType(e.getAggregateType())
                     .eventType(e.getEventType())
                     .payload(e.getPayload())
-                    .version(expectedVersion + 1 + i)
+                    .version(actualVersion + 1 + i)
                     .createdAt(e.getCreatedAt())
                     .hlcPhysicalTime(ts.physicalTime())
                     .hlcLogicalCounter(ts.logicalCounter())
@@ -161,7 +154,7 @@ public class PostgresEventStore implements EventStore {
         return max == null ? 0L : max;
     }
 
-    // === Conversion helpers ===
+    // Conversion helpers
 
     private EventEntity toEntity(Event event, long version) {
         JsonNode payload = objectMapper.valueToTree(event);

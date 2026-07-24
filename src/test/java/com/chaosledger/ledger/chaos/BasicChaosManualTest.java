@@ -1,4 +1,3 @@
-// src/test/java/com/chaosledger/ledger/chaos/BasicChaosManualTest.java
 package com.chaosledger.ledger.chaos;
 
 import com.fasterxml.jackson.databind.JsonNode;

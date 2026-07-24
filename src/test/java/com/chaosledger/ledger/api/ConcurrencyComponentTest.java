@@ -53,9 +53,6 @@ class ConcurrencyComponentTest extends ComponentTestBaseFallback {
         eventRepo.flush();
     }
 
-    // =====================================================================
-    // Helpers
-    // =====================================================================
 
     private String openAccount(String currency) {
         var request = Map.of(
@@ -77,9 +74,7 @@ class ConcurrencyComponentTest extends ComponentTestBaseFallback {
         return rest.getForObject("/api/accounts/" + accountId, Map.class);
     }
 
-    // =====================================================================
     // Test 1: 20 concurrent deposits — all should succeed, balance is sum
-    // =====================================================================
     @Test
     @DisplayName("20 concurrent deposits of ₹100 each → balance is exactly ₹2000")
     void concurrentDeposits_allSucceed_balanceIsSum() throws Exception {
@@ -141,9 +136,7 @@ class ConcurrencyComponentTest extends ComponentTestBaseFallback {
         assertThat(successCount.get() + retryableFailures.get()).isEqualTo(numThreads);
     }
 
-    // =====================================================================
     // Test 2: Concurrent withdrawals — cannot overdraw
-    // =====================================================================
     @Test
     @DisplayName("10 concurrent withdrawals of ₹600 from ₹1000 balance → at most 1 succeeds")
     void concurrentWithdrawals_cannotOverdraw() throws Exception {
@@ -194,9 +187,7 @@ class ConcurrencyComponentTest extends ComponentTestBaseFallback {
                 .isGreaterThanOrEqualTo(0.0);
     }
 
-    // =====================================================================
     // Test 3: Concurrent transfers from same sender — no double-spend
-    // =====================================================================
     @Test
     @DisplayName("10 concurrent transfers of ₹600 from ₹1000 → at most 1 succeeds, no money created")
     void concurrentTransfers_noDoubleSpend() throws Exception {

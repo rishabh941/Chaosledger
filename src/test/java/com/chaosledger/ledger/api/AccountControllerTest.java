@@ -50,9 +50,7 @@ class AccountControllerTest extends ComponentTestBaseFallback {
         eventRepo.flush();
     }
 
-    // =====================================================================
     // Helper methods — keep tests readable by extracting repeated patterns
-    // =====================================================================
 
     /**
      * Opens a new account and returns the accountId UUID string.
@@ -94,9 +92,7 @@ class AccountControllerTest extends ComponentTestBaseFallback {
         return rest.getForObject("/api/accounts/" + accountId, Map.class);
     }
 
-    // =====================================================================
     // Test 1: Open account — happy path
-    // =====================================================================
     @Test
     @DisplayName("POST /api/accounts → 201 Created with accountId")
     void openAccount_returnsCreatedWithAccountId() {
@@ -115,9 +111,7 @@ class AccountControllerTest extends ComponentTestBaseFallback {
                 .startsWith("/api/accounts/");
     }
 
-    // =====================================================================
     // Test 2: New account starts with zero balance
-    // =====================================================================
     @Test
     @DisplayName("GET new account → balance is 0.00, status OPEN, version 1")
     void newAccount_hasZeroBalanceAndOpenStatus() {
@@ -131,9 +125,7 @@ class AccountControllerTest extends ComponentTestBaseFallback {
         assertThat(account.get("version")).isEqualTo(1);
     }
 
-    // =====================================================================
     // Test 3: Deposit increases balance
-    // =====================================================================
     @Test
     @DisplayName("Deposit ₹1000 → balance becomes 1000.00, version increments")
     void deposit_increasesBalance() {
@@ -146,9 +138,7 @@ class AccountControllerTest extends ComponentTestBaseFallback {
         assertThat(account.get("version")).isEqualTo(2);
     }
 
-    // =====================================================================
     // Test 4: Multiple deposits accumulate correctly
-    // =====================================================================
     @Test
     @DisplayName("Three deposits → balance is cumulative sum")
     void multipleDeposits_accumulateCorrectly() {
@@ -163,9 +153,7 @@ class AccountControllerTest extends ComponentTestBaseFallback {
         assertThat(account.get("version")).isEqualTo(4); // open + 3 deposits
     }
 
-    // =====================================================================
     // Test 5: Withdrawal decreases balance
-    // =====================================================================
     @Test
     @DisplayName("Deposit ₹1000 then withdraw ₹400 → balance is ₹600")
     void withdraw_decreasesBalance() {
@@ -183,9 +171,7 @@ class AccountControllerTest extends ComponentTestBaseFallback {
         assertThat(account.get("balance")).isEqualTo(600.0);
     }
 
-    // =====================================================================
     // Test 6: Withdraw more than balance → 422
-    // =====================================================================
     @Test
     @DisplayName("Withdraw more than balance → 422 INSUFFICIENT_BALANCE")
     void withdraw_moreThanBalance_returns422() {
@@ -206,9 +192,7 @@ class AccountControllerTest extends ComponentTestBaseFallback {
         assertThat(response.getBody()).containsKey("requestedAmount");
     }
 
-    // =====================================================================
     // Test 7: GET nonexistent account → 404
-    // =====================================================================
     @Test
     @DisplayName("GET nonexistent account → 404 ACCOUNT_NOT_FOUND")
     void getAccount_nonexistent_returns404() {
@@ -221,9 +205,7 @@ class AccountControllerTest extends ComponentTestBaseFallback {
         assertThat(response.getBody().get("error")).isEqualTo("ACCOUNT_NOT_FOUND");
     }
 
-    // =====================================================================
     // Test 8: Duplicate idempotency key → 409
-    // =====================================================================
     @Test
     @DisplayName("Same idempotencyKey twice → 409 DUPLICATE_COMMAND")
     void duplicateIdempotencyKey_returns409() {
@@ -249,9 +231,7 @@ class AccountControllerTest extends ComponentTestBaseFallback {
         assertThat(account.get("balance")).isEqualTo(500.0);
     }
 
-    // =====================================================================
     // Test 9: GET event history returns all events in order
-    // =====================================================================
     @Test
     @DisplayName("GET /api/accounts/{id}/events → returns ordered event history")
     void getEvents_returnsOrderedHistory() {
@@ -276,9 +256,7 @@ class AccountControllerTest extends ComponentTestBaseFallback {
         assertThat(events.get(2).get("eventType")).isEqualTo("MoneyWithdrawn");
     }
 
-    // =====================================================================
     // Test 10: Validation — missing required fields → 400
-    // =====================================================================
     @Test
     @DisplayName("Deposit without amount → 400 VALIDATION_FAILED")
     void deposit_missingAmount_returns400() {
