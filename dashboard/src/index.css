@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0e1a30;
+  --color-surface: #16233d;
+  --color-surface-hi: #1d2c49;
+  --color-line: rgba(140, 165, 210, 0.14);
+  --color-line-hi: rgba(140, 165, 210, 0.26);
+
+  --color-ink: #f3f6fc;
+  --color-ink-soft: #c4d0e4;
+  --color-muted: #93a2c0;
+  --color-dim: #65758f;
+
+  --color-blue: #4f9cf9;
+  --color-green: #33d6a0;
+  --color-amber: #f6b93b;
+  --color-red: #f4726f;
+  --color-violet: #a78bfa;
+
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+}
+
+@layer base {
+  * { box-sizing: border-box; }
+
+  html, body, #root { height: 100%; margin: 0; }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--color-bg);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(140, 165, 210, 0.20);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(140, 165, 210, 0.34); }
+
+/* Animations */
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(1.5); }
+}
+@keyframes ring-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(51,214,160,0.30), 0 0 22px rgba(51,214,160,0.18); }
+  50% { box-shadow: 0 0 0 5px rgba(51,214,160,0.06), 0 0 34px rgba(51,214,160,0.30); }
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.anim-pulse { animation: pulse-soft 2s ease-in-out infinite; }
+.anim-ring { animation: ring-glow 3s ease-in-out infinite; }
+.anim-rise { animation: rise 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+
+:focus-visible {
+  outline: 2px solid var(--color-blue);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
